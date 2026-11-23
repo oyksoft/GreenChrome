@@ -22,5 +22,6 @@
     <Compile Include="..\..\Core\ChromePlusClient.cs" />
     <Compile Include="..\..\Core\Detector.cs" />
     <Compile Include="..\..\Core\Http.cs" />
+    <Compile Include="..\..\Core\ProcessUtil.cs" />
   </ItemGroup>
 </Project>

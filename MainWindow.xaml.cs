@@ -823,78 +823,10 @@ namespace GreenChrome
 
         private CancellationTokenSource _cancel;
 
-        /// <summary>一组正在运行的、属于某套绿色版的进程（按可执行文件路径归组）。</summary>
-        private class RunningProc
-        {
-            public string Path;                 // 可执行文件路径
-            public List<int> Pids = new List<int>();
-
-            public int Count { get { return Pids.Count; } }
-        }
-
         /// <summary>
         /// 找出正在运行的、属于该绿色版目录的 Chrome 进程。
         /// 绿色版的 chrome.exe / chrome_proxy.exe 可能位于 App\ 或 App\&lt;版本&gt;\ 下，
         /// 只要 exe 所在目录在这套绿色版之内就算。
-        /// </summary>
-        private static List<RunningProc> RunningChromeIn(string greenDir)
-        {
-            var found = new List<RunningProc>();
-            if (string.IsNullOrWhiteSpace(greenDir)) return found;
-
-            string root;
-            try
-            {
-                root = Path.GetFullPath(greenDir).TrimEnd('\\', '/');
-            }
-            catch
-            {
-                return found;
-            }
-
-            foreach (var name in new[] { "chrome", "chrome_proxy" })
-            {
-                Process[] procs;
-                try { procs = Process.GetProcessesByName(name); }
-                catch { continue; }
-
-                foreach (var p in procs)
-                {
-                    using (p)
-                    {
-                        try
-                        {
-                            var file = p.MainModule.FileName;
-                            if (string.IsNullOrEmpty(file)) continue;
-                            var dir = Path.GetDirectoryName(file);
-                            if (string.IsNullOrEmpty(dir)) continue;
-                            dir = Path.GetFullPath(dir).TrimEnd('\\', '/');
-                            if (!dir.StartsWith(root, StringComparison.OrdinalIgnoreCase)) continue;
-                            if (dir.Length > root.Length && root.Length > 0 &&
-                                dir[root.Length] != '\\' && dir[root.Length] != '/') continue;
-
-                            // 同一个 exe 会有很多子进程，按路径归组
-                            var group = found.Find(g => string.Equals(g.Path, file, StringComparison.OrdinalIgnoreCase));
-                            if (group == null)
-                            {
-                                group = new RunningProc { Path = file };
-                                found.Add(group);
-                            }
-                            group.Pids.Add(p.Id);
-                        }
-                        catch
-                        {
-                            // 拿不到别的用户的进程路径就跳过
-                        }
-                    }
-                }
-            }
-            return found;
-        }
-
-        /// <summary>
-        /// 更新前确认这套绿色版的 Chrome 没有在运行。
-        /// 返回 true 表示可以继续；返回 false 表示用户取消，流程应终止。
         /// </summary>
         /// <summary>
         /// 更新前确认这套绿色版的 Chrome 没有在运行。
@@ -905,9 +837,14 @@ namespace GreenChrome
         /// </summary>
         private async Task<bool> EnsureChromeClosedAsync(string greenDir)
         {
-            var groups = RunningChromeIn(greenDir);
+            var groups = Core.ProcessUtil.RunningChromeIn(greenDir);
             if (groups.Count == 0)
                 return true;
+
+            string root;
+            try { root = Path.GetFullPath(greenDir).TrimEnd('\\', '/'); }
+            catch { root = greenDir; }
+            var myPid = Process.GetCurrentProcess().Id;
 
             var total = groups.Sum(g => g.Count);
             var shown = groups.Select(g => "  · " + g.Path +
@@ -930,7 +867,7 @@ namespace GreenChrome
             // 最多试 5 轮：杀进程 → 轮询等待 → 还在就再杀
             for (int round = 1; round <= 5; round++)
             {
-                var alive = RunningChromeIn(greenDir);
+                var alive = Core.ProcessUtil.RunningChromeIn(greenDir);
                 if (alive.Count == 0)
                 {
                     AddLog("Chrome 已全部关闭");
@@ -947,6 +884,10 @@ namespace GreenChrome
                         try
                         {
                             var p = Process.GetProcessById(pid);
+                            // pid 可能已被系统回收并复用给别的进程，
+                            // 动手前必须重新核对它确实是这个绿色版的 Chrome
+                            if (!Core.ProcessUtil.IsStillThisChrome(p, root))
+                                continue;
                             if (!p.CloseMainWindow())
                                 p.Kill();
                         }
@@ -955,11 +896,11 @@ namespace GreenChrome
                 }
 
                 // 温和关闭给 3 秒
-                for (int i = 0; i < 6 && RunningChromeIn(greenDir).Count > 0; i++)
+                for (int i = 0; i < 6 && Core.ProcessUtil.RunningChromeIn(greenDir).Count > 0; i++)
                     await Task.Delay(500);
 
                 // 还活着就强杀
-                var still = RunningChromeIn(greenDir);
+                var still = Core.ProcessUtil.RunningChromeIn(greenDir);
                 if (still.Count > 0)
                 {
                     foreach (var g in still)
@@ -969,6 +910,8 @@ namespace GreenChrome
                             try
                             {
                                 var p = Process.GetProcessById(pid);
+                                if (!Core.ProcessUtil.IsStillThisChrome(p, root))
+                                    continue;
                                 p.Kill();
                                 p.WaitForExit(3000);
                             }
@@ -982,7 +925,7 @@ namespace GreenChrome
                 for (int i = 0; i < 20; i++)
                 {
                     await Task.Delay(500);
-                    if (RunningChromeIn(greenDir).Count == 0)
+                    if (Core.ProcessUtil.RunningChromeIn(greenDir).Count == 0)
                     {
                         AddLog("Chrome 已全部关闭");
                         SetStatus("状态：Chrome 已关闭", "ColAccent");
@@ -991,7 +934,7 @@ namespace GreenChrome
                 }
             }
 
-            var left = RunningChromeIn(greenDir);
+            var left = Core.ProcessUtil.RunningChromeIn(greenDir);
             var leftCount = left.Sum(g => g.Count);
             AddLog("Chrome 未能完全关闭，剩余 " + leftCount + " 个进程");
             SetStatus("状态：Chrome 未能关闭", "ColDanger");
