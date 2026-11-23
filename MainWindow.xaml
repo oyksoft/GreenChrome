@@ -294,10 +294,27 @@
                                        VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
                                        Foreground="{StaticResource ColTextMuted}"/>
                             <StackPanel Grid.Column="2" Grid.Row="0" Orientation="Horizontal" VerticalAlignment="Center">
-                                <Button x:Name="BtnCheck" Content="检查更新" Style="{StaticResource SecondaryButton}"
-                                        Click="BtnCheck_Click"/>
-                                <Button x:Name="BtnUpgrade" Content="立即更新" Style="{StaticResource PrimaryButton}"
-                                        Margin="12,0,0,0" Click="BtnUpgrade_Click"/>
+                                <Button x:Name="BtnCheck" Style="{StaticResource SecondaryButton}"
+                                        AutomationProperties.Name="检查更新" Click="BtnCheck_Click">
+                                    <StackPanel Orientation="Horizontal">
+                                        <Path Data="{StaticResource IconRefresh}" Width="14" Height="14"
+                                              Stretch="Uniform" Fill="{StaticResource ColText}"
+                                              VerticalAlignment="Center"/>
+                                        <TextBlock x:Name="BtnCheckText" Text="检查更新" Margin="7,0,0,0"
+                                                   VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </Button>
+                                <Button x:Name="BtnUpgrade" Style="{StaticResource PrimaryButton}"
+                                        AutomationProperties.Name="立即更新"
+                                        Margin="12,0,0,0" Click="BtnUpgrade_Click">
+                                    <StackPanel Orientation="Horizontal">
+                                        <Path Data="{StaticResource IconUpdate}" Width="14" Height="14"
+                                              Stretch="Uniform" Fill="White"
+                                              VerticalAlignment="Center"/>
+                                        <TextBlock x:Name="BtnUpgradeText" Text="立即更新" Margin="7,0,0,0"
+                                                   Foreground="White" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </Button>
                             </StackPanel>
 
                             <!-- 下载进度 -->

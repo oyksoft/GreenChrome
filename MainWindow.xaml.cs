@@ -36,6 +36,20 @@ namespace GreenChrome
             UpdateUpgradeButton();   // 未检查前禁用
             _initializing = false;
             _uiReady = true;
+
+            // 配置里缺 ghMirrors 字段时（已用内置默认补齐），写回一次让配置保持完整
+            if (_cfg != null && _cfg.NeedsSave)
+            {
+                try
+                {
+                    _cfg.Save();
+                    AddLog("已在配置文件中补上 ghMirrors 默认镜像列表");
+                }
+                catch (Exception ex)
+                {
+                    AddLog("写入配置失败：" + ex.Message);
+                }
+            }
         }
 
         /// <summary>把配置里的通道同步到分段控件与版本号高亮。</summary>
@@ -584,7 +598,7 @@ namespace GreenChrome
         private void UpdateUpgradeButton()
         {
             BtnUpgrade.IsEnabled = false;
-            BtnUpgrade.Content = "立即更新";
+            BtnUpgradeText.Text = "立即更新";
 
             if (_lastData == null) return;                     // 还没检查过
             if (string.IsNullOrEmpty(_cfg.ChromeDir)) return;  // 未绑定
@@ -592,26 +606,26 @@ namespace GreenChrome
             var localVer = Detector.ChromeVersion(_cfg.ChromeDir);
             if (string.IsNullOrEmpty(localVer))
             {
-                BtnUpgrade.Content = "本机版本未知";
+                BtnUpgradeText.Text = "本机版本未知";
                 return;
             }
 
             var rel = CoiClient.Find(_lastData, _cfg.Channel, "x64");
             if (rel == null || !rel.IsUsable)
             {
-                BtnUpgrade.Content = "无可用版本";
+                BtnUpgradeText.Text = "无可用版本";
                 return;
             }
 
             var target = rel.version;
             if (SameVersion(localVer, target))
             {
-                BtnUpgrade.Content = "已是最新";
+                BtnUpgradeText.Text = "已是最新";
                 return;
             }
 
             BtnUpgrade.IsEnabled = true;
-            BtnUpgrade.Content = "应用到 " + target;
+            BtnUpgradeText.Text = "应用到 " + target;
             AddStatusHint(localVer, target);
         }
 

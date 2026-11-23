@@ -4,6 +4,7 @@ using System.IO;
 using System.Reflection;
 using System.Text;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 
 namespace GreenChrome.Core
 {
@@ -52,10 +53,14 @@ namespace GreenChrome.Core
         [JsonProperty("ghMirrors", NullValueHandling = NullValueHandling.Ignore)]
         public string[] GhMirrors { get; set; }
 
-        /// <summary>内置的 GitHub 镜像（实测可用）。</summary>
+        /// <summary>
+        /// 内置的 GitHub 镜像（实测可用，按速度排序）。
+        /// 三个都能代理 api.github.com 与 release 下载，且下载到的包 SHA256 与官方一致。
+        /// </summary>
         public static readonly string[] DefaultGhMirrors =
         {
             "https://gh-proxy.com",
+            "https://gh-proxy.org",
             "https://ghproxy.net"
         };
 
@@ -73,12 +78,19 @@ namespace GreenChrome.Core
             }
         }
 
+        /// <summary>
+        /// 启动时发现配置文件缺少 ghMirrors 字段（已用内置默认补齐），
+        /// 需要在启动后写回一次，让配置文件始终是完整的。
+        /// </summary>
+        [JsonIgnore]
+        public bool NeedsSave { get; private set; }
+
         public AppConfig()
         {
             ChromeDir = "";
             Channel = DefaultChannel;
             Api = null;          // 固定用 DefaultApi，不写入配置文件
-            Proxy = "";
+            Proxy = null;        // 当前版本未使用，不写入配置文件
             AutoCheck = false;
         }
 
@@ -115,7 +127,16 @@ namespace GreenChrome.Core
             try
             {
                 var json = File.ReadAllText(path, Encoding.UTF8);
-                cfg = JsonConvert.DeserializeObject<AppConfig>(json) ?? new AppConfig();
+                var obj = JObject.Parse(json);
+                cfg = obj.ToObject<AppConfig>() ?? new AppConfig();
+
+                // 配置文件里没有 ghMirrors 字段时用内置默认补上，
+                // 并标记需要写回文件（让配置始终完整可见、可直接手改）
+                if (obj["ghMirrors"] == null)
+                {
+                    cfg.GhMirrors = DefaultGhMirrors;
+                    cfg.NeedsSave = true;
+                }
             }
             catch (Exception ex)
             {
@@ -127,7 +148,7 @@ namespace GreenChrome.Core
             if (string.IsNullOrEmpty(cfg.Channel)) cfg.Channel = DefaultChannel;
             cfg.Api = null;   // 固定用 DefaultApi，不从文件里读
             if (cfg.ChromeDir == null) cfg.ChromeDir = "";
-            if (cfg.Proxy == null) cfg.Proxy = "";
+            cfg.Proxy = null;    // 当前版本未使用，不从文件里读
             return cfg;
         }
 

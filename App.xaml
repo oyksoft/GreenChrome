@@ -18,6 +18,12 @@
         <SolidColorBrush x:Key="ColDangerBg"    Color="#FFF5F5"/>
         <SolidColorBrush x:Key="ColDangerBorder" Color="#F0C4C4"/>
 
+        <!-- ===== 按钮图标（矢量，24x24 视口）===== -->
+        <!-- 刷新 / 循环箭头：检查更新 -->
+        <Geometry x:Key="IconRefresh">M 17.65,6.35 C 16.2,4.9 14.21,4 12,4 c -4.42,0 -7.99,3.58 -7.99,8 s 3.57,8 7.99,8 c 3.73,0 6.84,-2.55 7.73,-6 h -2.08 c -0.82,2.33 -3.04,4 -5.65,4 c -3.31,0 -6,-2.69 -6,-6 s 2.69,-6 6,-6 c 1.66,0 3.14,0.69 4.22,1.78 L 13,11 h 7 V 4 l -2.35,2.35 z</Geometry>
+        <!-- 上下双箭头：立即更新 -->
+        <Geometry x:Key="IconUpdate">M 12,4 L 12,1 L 8,5 l 4,4 L 12,6 c 3.31,0 6,2.69 6,6 c 0,1.01 -0.25,1.97 -0.7,2.8 l 1.46,1.46 C 19.54,15.03 20,13.57 20,12 C 20,7.58 16.42,4 12,4 z M 12,18 c -3.31,0 -6,-2.69 -6,-6 c 0,-1.01 0.25,-1.97 0.7,-2.8 L 5.24,7.74 C 4.46,9.17 4,10.63 4,12 c 0,4.42 3.58,8 8,8 v 3 l 4,-4 l -4,-4 v 3 z</Geometry>
+
         <!-- ===== 字体 ===== -->
         <FontFamily x:Key="UiFont">Microsoft YaHei UI, Microsoft YaHei, SimHei</FontFamily>
 
