@@ -4,7 +4,7 @@
 
 ![Windows](https://img.shields.io/badge/Windows-10%20%2F%2011-blue)
 ![.NET Framework](https://img.shields.io/badge/.NET%20Framework-4.8.1-purple)
-![License](https://img.shields.io/badge/license-closed%20source-orange)
+![License](https://img.shields.io/badge/license-MIT-green)
 
 ## 功能
 
@@ -74,3 +74,7 @@ GreenChrome.exe --selftest
 
 - [Chrome++ Next](https://github.com/Bush2021/chrome_plus) —— 提供绿色化所需的 `version.dll`
 - Chrome 离线包来自 Google 官方
+
+## 许可
+
+[MIT](LICENSE)
