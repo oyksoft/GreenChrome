@@ -10,6 +10,8 @@
         <SolidColorBrush x:Key="ColBorder"      Color="#E5E7EB"/>
         <SolidColorBrush x:Key="ColText"        Color="#1A1D23"/>
         <SolidColorBrush x:Key="ColTextMuted"   Color="#6B7280"/>
+        <!-- 键名专用：比 muted 深一档，与右侧的值视觉重量匹配（否则看着会“小一号”） -->
+        <SolidColorBrush x:Key="ColTextLabel"   Color="#454B57"/>
         <SolidColorBrush x:Key="ColAccent"      Color="#16A34A"/>
         <SolidColorBrush x:Key="ColAccentBg"    Color="#E7F6EC"/>
         <SolidColorBrush x:Key="ColDanger"      Color="#C0392B"/>
@@ -217,7 +219,7 @@
         <Style x:Key="KvKey" TargetType="TextBlock">
             <Setter Property="FontFamily" Value="{StaticResource UiFont}"/>
             <Setter Property="FontSize" Value="13.5"/>
-            <Setter Property="Foreground" Value="{StaticResource ColTextMuted}"/>
+            <Setter Property="Foreground" Value="{StaticResource ColTextLabel}"/>
             <Setter Property="Width" Value="78"/>
             <Setter Property="LineHeight" Value="30"/>
             <Setter Property="VerticalAlignment" Value="Center"/>

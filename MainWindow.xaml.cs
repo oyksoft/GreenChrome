@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
@@ -336,6 +338,76 @@ namespace GreenChrome
                 return;
 
             BindDirectory(path);
+        }
+
+        /// <summary>在资源管理器里打开绑定的绿色版目录。</summary>
+        private void BtnOpenDir_Click(object sender, RoutedEventArgs e)
+        {
+            OpenFolder(_cfg.ChromeDir, "绿色版目录");
+        }
+
+        /// <summary>打开 Chrome 程序所在的 App 目录。</summary>
+        private void BtnOpenAppDir_Click(object sender, RoutedEventArgs e)
+        {
+            OpenFolder(Path.Combine(_cfg.ChromeDir ?? "", "App"), "Chrome 程序目录");
+        }
+
+        /// <summary>打开用户数据目录 Data。</summary>
+        private void BtnOpenDataDir_Click(object sender, RoutedEventArgs e)
+        {
+            OpenFolder(Path.Combine(_cfg.ChromeDir ?? "", "Data"), "用户数据目录");
+        }
+
+        /// <summary>运行这套绿色版 Chrome。</summary>
+        private void BtnRunChrome_Click(object sender, RoutedEventArgs e)
+        {
+            var exe = Path.Combine(_cfg.ChromeDir ?? "", "App", "chrome.exe");
+            if (!File.Exists(exe))
+            {
+                MessageDialog.Show(this, DialogKind.Warn, "找不到 Chrome",
+                    "这个目录里没有 App\\chrome.exe。\n\n" + exe);
+                return;
+            }
+            try
+            {
+                Process.Start(new ProcessStartInfo(exe) { UseShellExecute = true, WorkingDirectory = Path.GetDirectoryName(exe) });
+                AddLog("已启动 Chrome：" + exe);
+            }
+            catch (Exception ex)
+            {
+                AddLog("启动 Chrome 失败：" + ex.Message);
+                MessageDialog.Show(this, DialogKind.Error, "启动失败", ex.Message);
+            }
+        }
+
+        /// <summary>在资源管理器里打开一个目录。</summary>
+        private void OpenFolder(string dir, string what)
+        {
+            if (string.IsNullOrEmpty(_cfg.ChromeDir))
+            {
+                MessageDialog.Show(this, DialogKind.Warn, "尚未绑定目录",
+                    "还没有绑定绿色版 Chrome 目录。\n\n请先选择已有目录，或从零制作一套。");
+                return;
+            }
+            if (string.IsNullOrEmpty(dir) || !Directory.Exists(dir))
+            {
+                MessageDialog.Show(this, DialogKind.Warn, "目录不存在",
+                    what + "不存在：\n\n" + dir +
+                    "\n\n如果还没创建过，可以从零制作一套，或手动建好后再试。");
+                return;
+            }
+
+            try
+            {
+                // UseShellExecute + 目录本身 = 打开资源管理器并定位到该目录
+                Process.Start(new ProcessStartInfo(dir) { UseShellExecute = true });
+                AddLog("已打开" + what + " " + dir);
+            }
+            catch (Exception ex)
+            {
+                AddLog("打开目录失败：" + ex.Message);
+                MessageDialog.Show(this, DialogKind.Error, "打开失败", ex.Message);
+            }
         }
 
         private void BtnUnbind_Click(object sender, RoutedEventArgs e)
