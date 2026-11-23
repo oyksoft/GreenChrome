@@ -25,7 +25,8 @@ class Program
         if (cpp == null) { Console.WriteLine("  FAIL 返回 null"); return; }
         Console.WriteLine("  OK  版本 " + cpp.Version + "  用时 " + sw.Elapsed.TotalSeconds.ToString("F1") + "s");
         Console.WriteLine("  SHA256 = " + (cpp.Sha256 ?? "(无)"));
-        Console.WriteLine("  来自镜像? " + cpp.Sha256FromMirror);
+        Console.WriteLine("  版本号来自镜像? " + cpp.VersionFromMirror);
+        Console.WriteLine("  SHA256 来自镜像? " + cpp.Sha256FromMirror);
 
         Console.WriteLine();
         Console.WriteLine("=== 3. 镜像全部失效时，应回退官方 ===");

@@ -17,6 +17,7 @@ namespace GreenChrome.Core
         public string PackageUrl;   // 7z 包下载地址
         public string UpdateJsonUrl;
         public bool Sha256FromMirror;   // SHA256 是否来自镜像（而非官方）
+        public bool VersionFromMirror;  // 版本号是否来自镜像（而非官方 API）
     }
 
     /// <summary>
@@ -64,9 +65,12 @@ namespace GreenChrome.Core
                             var rel = new ChromePlusRelease
                             {
                                 Version = (string)obj["tag_name"],
-                                UpdateJsonUrl = UpdateJsonBase + obj["tag_name"] + "/update.json"
+                                UpdateJsonUrl = UpdateJsonBase + obj["tag_name"] + "/update.json",
+                                VersionFromMirror = !IsOfficial(api, mirrors)
                             };
                             if (string.IsNullOrEmpty(rel.Version)) return null;
+                            if (rel.VersionFromMirror && log != null)
+                                log("Chrome++ 版本号取自镜像 " + HostOf(api));
 
                             // 找 7z 资源包
                             var assets = obj["assets"] as JArray;
@@ -86,8 +90,8 @@ namespace GreenChrome.Core
                             }
                             if (string.IsNullOrEmpty(rel.PackageUrl)) return null;
 
-                            // SHA256 优先从官方 update.json 取；官方取不到再走镜像
-                            var uCandidates = CandidateUrls(rel.UpdateJsonUrl, mirrors);
+                            // SHA256 优先用官方的（最可信），官方取不到才走镜像
+                            var uCandidates = CandidateUrlsOfficialFirst(rel.UpdateJsonUrl, mirrors);
                             foreach (var u in uCandidates)
                             {
                                 try
@@ -151,6 +155,25 @@ namespace GreenChrome.Core
                 }
             }
             list.Add(realUrl);
+            return list;
+        }
+
+        /// <summary>
+        /// 生成候选地址：官方优先，镜像随后。
+        /// 用于取校验用的 SHA256——官方的值最可信，官方不可达时才用镜像的。
+        /// </summary>
+        private static List<string> CandidateUrlsOfficialFirst(string realUrl, string[] mirrors)
+        {
+            var list = new List<string>();
+            list.Add(realUrl);
+            if (mirrors != null)
+            {
+                foreach (var m in mirrors)
+                {
+                    if (string.IsNullOrWhiteSpace(m)) continue;
+                    list.Add(m.TrimEnd('/') + "/" + realUrl);
+                }
+            }
             return list;
         }
 
