@@ -1,5 +1,7 @@
 # GreenChrome
 
+![GreenChrome](docs/screenshot.png)
+
 绿色版 Chrome 管理工具 —— 把官方 Chrome 离线包，整理成可以放在任意目录的绿色版。
 
 ![Windows](https://img.shields.io/badge/Windows-10%20%2F%2011-blue)
