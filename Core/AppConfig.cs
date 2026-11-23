@@ -58,16 +58,44 @@ namespace GreenChrome.Core
 
         /// <summary>
         /// 读取配置。文件不存在时返回默认值（首次使用，不报错）。
-        /// 文件损坏时抛异常，由调用方提示并降级为默认值。
+        /// 文件损坏时把坏文件备份为 greenchrome.conf.bad 并返回默认值，
+        /// 不打断启动（警告文案通过 warning 返回，由界面写日志）。
         /// </summary>
         public static AppConfig Load()
         {
+            string ignored;
+            return Load(out ignored);
+        }
+
+        public static AppConfig Load(out string warning)
+        {
+            warning = null;
             var path = FilePath;
             if (!File.Exists(path))
                 return new AppConfig();
 
-            var json = File.ReadAllText(path, Encoding.UTF8);
-            var cfg = JsonConvert.DeserializeObject<AppConfig>(json) ?? new AppConfig();
+            AppConfig cfg;
+            try
+            {
+                var json = File.ReadAllText(path, Encoding.UTF8);
+                cfg = JsonConvert.DeserializeObject<AppConfig>(json) ?? new AppConfig();
+            }
+            catch (Exception ex)
+            {
+                // 坏文件留档，避免用户下次启动反复报错
+                var bad = path + ".bad";
+                try
+                {
+                    if (File.Exists(bad)) File.Delete(bad);
+                    File.Move(path, bad);
+                    warning = "配置文件格式有误，已备份为 " + Path.GetFileName(bad) + "，本次按默认配置启动（" + ex.Message + "）";
+                }
+                catch
+                {
+                    warning = "配置文件格式有误，本次按默认配置启动（" + ex.Message + "）";
+                }
+                return new AppConfig();
+            }
 
             // 用默认值补全缺失字段（与 Go 版一致）
             if (string.IsNullOrEmpty(cfg.Channel)) cfg.Channel = DefaultChannel;

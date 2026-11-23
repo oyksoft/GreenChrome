@@ -19,3 +19,12 @@ greenchrome.conf.bak
 .vs/
 *.user
 *.suo
+
+# 临时下载 / 接口快照
+api.json
+cpp*.json
+cpp.7z
+
+# 验证用探针程序
+tools/probe/bin/
+tools/probe/obj/

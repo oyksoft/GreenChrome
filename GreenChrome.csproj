@@ -18,6 +18,14 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <!-- 排除工具目录（独立项目） -->
+    <Compile Remove="tools\**" />
+    <None Remove="tools\**" />
+    <Page Remove="tools\**" />
+    <ApplicationDefinition Remove="tools\**" />
+  </ItemGroup>
+
+  <ItemGroup>
     <!-- 让 dotnet SDK 能编译 net48x 项目（无需安装 Developer Pack） -->
     <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" PrivateAssets="All" />
     <!-- 纯托管 7z 解压，可编译进 exe，无需外部 7z.dll -->

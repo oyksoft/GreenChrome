@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Media;
@@ -80,15 +81,10 @@ namespace GreenChrome
         // ================= 启动 =================
         private void LoadConfig()
         {
-            try
-            {
-                _cfg = AppConfig.Load();
-            }
-            catch (Exception ex)
-            {
-                AddLog("读取配置失败（将使用默认值）：" + ex.Message);
-                _cfg = new AppConfig();
-            }
+            string cfgWarning;
+            _cfg = AppConfig.Load(out cfgWarning);
+            if (!string.IsNullOrEmpty(cfgWarning))
+                AddLog(cfgWarning);
 
             // 绑定的目录若已失效（被删/挪走），回到引导页
             if (!string.IsNullOrEmpty(_cfg.ChromeDir) && !Detector.IsGreenChromeDir(_cfg.ChromeDir))
@@ -117,6 +113,11 @@ namespace GreenChrome
         }
 
         private void RefreshLocalInfo()
+        {
+            Ui(RefreshLocalInfoCore);
+        }
+
+        private void RefreshLocalInfoCore()
         {
             var ver = Detector.ChromeVersion(_cfg.ChromeDir);
             var arch = Detector.Arch(_cfg.ChromeDir);
@@ -170,11 +171,118 @@ namespace GreenChrome
             BindDirectory(path);
         }
 
-        private void BtnMakeFresh_Click(object sender, RoutedEventArgs e)
+        private async void BtnMakeFresh_Click(object sender, RoutedEventArgs e)
         {
-            AddLog("从零制作流程尚未接入");
-            MessageDialog.Show(this, DialogKind.Info, "尚未接入",
-                "「从零制作一套」需要下载官方离线包并解包，\n这一步还在开发中。\n\n暂时请先用「选择已有目录」绑定一个现成的绿色版。");
+            var path = PickDirectory();
+            if (string.IsNullOrEmpty(path))
+                return;
+
+            // 安全校验：不接受已有绿色版、不接受非空目录、不接受与已绑定目录重叠
+            var reason = ChromeUpdater.ValidateFreshTarget(path, _cfg.ChromeDir);
+            if (reason != null)
+            {
+                AddLog("不能在这个目录制作：" + path);
+                MessageDialog.Show(this, DialogKind.Warn, "换个目录", reason + "\n\n选中的目录：\n" + path);
+                return;
+            }
+
+            var channel = string.IsNullOrEmpty(_cfg.Channel) ? "stable" : _cfg.Channel;
+            if (!MessageDialog.Confirm(this, DialogKind.Info, "从零制作一套",
+                "将在下面这个目录里制作一套全新的绿色版 Chrome：\n\n" + path +
+                "\n\n· 通道：" + channel.ToUpperInvariant() +
+                "\n· 需要下载约 540 MB 官方离线包" +
+                "\n· 会写入 App\\<版本>\\、App\\chrome.exe、Chrome++" +
+                "\n· 现有其它目录不会被改动" +
+                "\n\n过程中请勿关闭窗口。现在开始吗？",
+                "开始制作", "取消"))
+                return;
+
+            _cancel = new CancellationTokenSource();
+            BtnPickExisting.IsEnabled = false;
+            BtnMakeFresh.IsEnabled = false;
+            FreshProgress.Visibility = Visibility.Visible;
+            FreshFill.Width = 0;
+            FreshStatus.Text = "正在获取线上版本…";
+            AddLog("开始从零制作：" + path + "（通道 " + channel + "）");
+
+            try
+            {
+                var data = await Task.Run(() => CoiClient.Fetch(_cfg.Api));
+                var rel = CoiClient.Find(data, channel, "x64");
+                if (rel == null || !rel.IsUsable)
+                {
+                    MessageDialog.Show(this, DialogKind.Warn, "无可用版本",
+                        channel.ToUpperInvariant() + " 通道当前没有可用的 x64 版本信息，请稍后再试。");
+                    return;
+                }
+
+                FreshStatus.Text = "准备下载 " + rel.version;
+                AddLog("目标版本 " + rel.version + "（" + (rel.size / 1048576.0).ToString("F0") + " MB）");
+
+                var progress = new FreshProgressReporter(this);
+                var version = await Task.Run(() =>
+                    ChromeUpdater.CreateFresh(path, rel, "x64", progress, _cancel.Token));
+
+                AddLog("制作完成，版本 " + version);
+                FreshStatus.Text = "制作完成：" + version;
+                BindDirectory(path, silent: true);
+                MessageDialog.Show(this, DialogKind.Info, "制作完成",
+                    "已在这个目录制作好一套绿色版 Chrome：\n\n" + path +
+                    "\n\n版本：" + version + "\nChrome++ 已一并安装，用户配置会存放在 App\\chrome++.ini。\n\n可以直接运行 App\\chrome.exe。");
+            }
+            catch (OperationCanceledException)
+            {
+                AddLog("制作已取消");
+                FreshStatus.Text = "已取消";
+            }
+            catch (Exception ex)
+            {
+                AddLog("制作失败：" + ex.Message);
+                FreshStatus.Text = "制作失败：" + ex.Message;
+                MessageDialog.Show(this, DialogKind.Error, "制作失败", ex.Message);
+            }
+            finally
+            {
+                BtnPickExisting.IsEnabled = true;
+                BtnMakeFresh.IsEnabled = true;
+                FreshProgress.Visibility = Visibility.Collapsed;
+                _cancel = null;
+            }
+        }
+
+        /// <summary>把制作进度转到引导页。</summary>
+        private class FreshProgressReporter : ChromeUpdater.IProgress
+        {
+            private readonly MainWindow _w;
+            public FreshProgressReporter(MainWindow w) { _w = w; }
+
+            public void Log(string message) { _w.AddLog(message); }
+
+            public void Status(string message)
+            {
+                _w.Ui(() => _w.FreshStatus.Text = message);
+            }
+
+            public void Stage(string stage)
+            {
+                _w.Ui(() => _w.FreshStatus.Text = "—— " + stage + " ——");
+                _w.AddLog("—— " + stage + " ——");
+            }
+
+            public void DownloadProgress(long received, long total)
+            {
+                _w.Ui(() =>
+                {
+                    var w = _w.FreshFill.Parent as System.Windows.FrameworkElement;
+                    double full = w != null ? w.ActualWidth : 0;
+                    double pct = total > 0 ? (double)received / total : 0;
+                    _w.FreshFill.Width = Math.Max(0, full * pct);
+                    _w.FreshStatus.Text = total > 0
+                        ? string.Format("正在下载  {0:F0}%   {1:F0} / {2:F0} MB", pct * 100,
+                            received / 1048576.0, total / 1048576.0)
+                        : string.Format("正在下载  {0:F0} MB", received / 1048576.0);
+                });
+            }
         }
 
         // ================= 仪表盘操作 =================
@@ -216,14 +324,15 @@ namespace GreenChrome
             UpdateView();
         }
 
-        private void BindDirectory(string path)
+        private void BindDirectory(string path, bool silent = false)
         {
             _cfg.ChromeDir = path;
             try
             {
                 _cfg.Save();
                 AddLog("已绑定绿色版目录 " + path);
-                MessageDialog.Show(this, DialogKind.Info, "绑定成功", "已绑定绿色版目录：\n" + path);
+                if (!silent)
+                    MessageDialog.Show(this, DialogKind.Info, "绑定成功", "已绑定绿色版目录：\n" + path);
             }
             catch (Exception ex)
             {
@@ -247,7 +356,20 @@ namespace GreenChrome
 
             try
             {
+                // Chrome 与 Chrome++ 并行检查；Chrome++ 失败不影响主流程
+                var cppTask = Task.Run(() => ChromePlusClient.FetchLatest());
                 var data = await Task.Run(() => CoiClient.Fetch(_cfg.Api));
+                _cppRelease = await cppTask;         // 失败时为 null，静默降级
+                if (_cppRelease != null)
+                {
+                    _cppLatestVersion = _cppRelease.Version ?? "";
+                    AddLog("Chrome++ 最新版 " + _cppLatestVersion);
+                }
+                else
+                {
+                    AddLog("Chrome++ 版本检查失败（不影响 Chrome 更新）");
+                }
+                UpdateChromePlusLabel();
 
                 VerStable.Text = DisplayOf(data, "stable");
                 VerBeta.Text = DisplayOf(data, "beta");
@@ -280,6 +402,8 @@ namespace GreenChrome
         }
 
         private Dictionary<string, ReleaseInfo> _lastData;
+        private ChromePlusRelease _cppRelease;      // Chrome++ 最新版（null = 未获取到）
+        private string _cppLatestVersion = "";     // Chrome++ 线上最新版本号
 
         /// <summary>
         /// 根据「本机版本 vs 所选通道的线上版本」决定「立即更新」按钮：
@@ -354,6 +478,81 @@ namespace GreenChrome
             }
         }
 
+        /// <summary>刷新 Chrome++ 行的显示：本地版本 + 是否有新版。</summary>
+        private void UpdateChromePlusLabel()
+        {
+            if (LocalChromePlus == null) return;
+
+            var local = Detector.ChromePlusVersion(_cfg.ChromeDir);
+            if (string.IsNullOrEmpty(local))
+            {
+                LocalChromePlus.Text = "未检测";
+                BtnCppUpdate.Visibility = Visibility.Collapsed;
+                return;
+            }
+
+            var name = Detector.ChromePlusName(_cfg.ChromeDir);
+            var localText = string.IsNullOrEmpty(name) ? local : name + " " + local;
+            LocalChromePlus.Text = localText;
+
+            // 线上有新版才显示更新按钮
+            if (!string.IsNullOrEmpty(_cppLatestVersion) && !SameVersion(local, _cppLatestVersion))
+            {
+                LocalChromePlus.Text = localText + "  →  " + _cppLatestVersion;
+                BtnCppUpdate.Visibility = Visibility.Visible;
+                BtnCppUpdate.Content = "更新 Chrome++";
+                BtnCppUpdate.IsEnabled = true;
+            }
+            else
+            {
+                BtnCppUpdate.Visibility = Visibility.Collapsed;
+            }
+        }
+
+        /// <summary>更新 Chrome++（只替换 version.dll，不动 chrome++.ini）。</summary>
+        private async void BtnCppUpdate_Click(object sender, RoutedEventArgs e)
+        {
+            if (_cppRelease == null)
+            {
+                MessageDialog.Show(this, DialogKind.Warn, "无法更新", "没有获取到 Chrome++ 的版本信息，请稍后再试。");
+                return;
+            }
+            if (string.IsNullOrEmpty(_cfg.ChromeDir))
+            {
+                MessageDialog.Show(this, DialogKind.Warn, "尚未绑定目录", "请先绑定绿色版 Chrome 目录。");
+                return;
+            }
+
+            SetBusy(true);
+            try
+            {
+                var arch = Detector.Arch(_cfg.ChromeDir);
+                if (arch == "未知") arch = "x64";
+
+                var log = new List<string>();
+                var bak = await Task.Run(() => ChromePlusClient.Update(_cfg.ChromeDir, arch, _cppRelease, m =>
+                {
+                    log.Add(m);
+                    AddLog(m);
+                }));
+
+                AddLog("Chrome++ 已更新到 " + _cppRelease.Version);
+                RefreshLocalInfo();
+                UpdateChromePlusLabel();
+                MessageDialog.Show(this, DialogKind.Info, "Chrome++ 已更新",
+                    "Chrome++ 已更新到 " + _cppRelease.Version + "。\n\n若有旧文件，已备份为 App\version.dll.bak。");
+            }
+            catch (Exception ex)
+            {
+                AddLog("Chrome++ 更新失败：" + ex.Message);
+                MessageDialog.Show(this, DialogKind.Error, "更新失败", ex.Message);
+            }
+            finally
+            {
+                SetBusy(false);
+            }
+        }
+
         /// <summary>把用户所选通道的版本号高亮（其余淡化）。</summary>
         private void HighlightSelectedChannel()
         {
@@ -383,16 +582,112 @@ namespace GreenChrome
             return string.IsNullOrEmpty(rel.version) ? "无数据" : rel.version;
         }
 
-        private void BtnUpgrade_Click(object sender, RoutedEventArgs e)
+        private CancellationTokenSource _cancel;
+
+        private async void BtnUpgrade_Click(object sender, RoutedEventArgs e)
         {
             if (string.IsNullOrEmpty(_cfg.ChromeDir))
             {
                 MessageDialog.Show(this, DialogKind.Warn, "尚未绑定目录", "请先绑定一个绿色版 Chrome 目录。");
                 return;
             }
-            AddLog("升级流程尚未接入");
-            MessageDialog.Show(this, DialogKind.Info, "尚未接入",
-                "升级需要下载官方离线包、解包并切换版本，\n这一步还在开发中。");
+            if (_lastData == null)
+            {
+                MessageDialog.Show(this, DialogKind.Warn, "尚未检查更新", "请先点「检查更新」。");
+                return;
+            }
+
+            var rel = CoiClient.Find(_lastData, _cfg.Channel, "x64");
+            if (rel == null || !rel.IsUsable)
+            {
+                MessageDialog.Show(this, DialogKind.Warn, "无可用版本", "所选通道没有可用的版本信息。");
+                return;
+            }
+
+            // 确认：可能比本机旧（跨通道回退）
+            var localVer = Detector.ChromeVersion(_cfg.ChromeDir);
+            if (!string.IsNullOrEmpty(localVer) && !SameVersion(localVer, rel.version))
+            {
+                bool newer = IsNewer(rel.version, localVer);
+                string msg = newer
+                    ? "将把本机 Chrome 从 " + localVer + " 更新到 " + rel.version + "。\n\n过程中请勿运行 Chrome。"
+                    : "线上版本 " + rel.version + " 比本机 " + localVer + " 更旧。\n\n应用后本机 Chrome 会回退到旧版本。\n\n确定继续吗？";
+                if (!MessageDialog.Confirm(this, newer ? DialogKind.Info : DialogKind.Warn,
+                    newer ? "确认更新" : "确认回退", msg, "确定", "取消"))
+                    return;
+            }
+
+            _cancel = new CancellationTokenSource();
+            SetBusy(true);
+            try
+            {
+                var progress = new UpdaterProgress(this);
+                var version = await Task.Run(() =>
+                    ChromeUpdater.Apply(_cfg.ChromeDir, rel, progress, _cancel.Token));
+
+                AddLog("已应用版本 " + version);
+                SetStatus("状态：已更新到 " + version, "ColAccent");
+                RefreshLocalInfo();
+                MessageDialog.Show(this, DialogKind.Info, "更新完成",
+                    "Chrome 已更新到 " + version + "。\n\n重新启动 Chrome 即可生效。");
+            }
+            catch (OperationCanceledException)
+            {
+                AddLog("操作已取消");
+                SetStatus("状态：已取消", "ColTextMuted");
+            }
+            catch (Exception ex)
+            {
+                AddLog("更新失败：" + ex.Message);
+                SetStatus("状态：更新失败", "ColDanger");
+                MessageDialog.Show(this, DialogKind.Error, "更新失败", ex.Message);
+            }
+            finally
+            {
+                SetBusy(false);
+                _cancel = null;
+            }
+        }
+
+        /// <summary>把下载/解包进度转到界面。</summary>
+        private class UpdaterProgress : ChromeUpdater.IProgress
+        {
+            private readonly MainWindow _w;
+            public UpdaterProgress(MainWindow w) { _w = w; }
+
+            public void Log(string message) { _w.AddLog(message); }
+            public void Status(string message) { _w.SetStatus("状态：" + message, "ColAccent"); }
+            public void Stage(string stage) { _w.AddLog("—— " + stage + " ——"); }
+            public void DownloadProgress(long received, long total)
+            {
+                _w.SetProgress(received, total);
+            }
+        }
+
+        private void SetBusy(bool busy)
+        {
+            BtnCheck.IsEnabled = !busy;
+            BtnUpgrade.IsEnabled = !busy;
+            if (!busy) UpdateUpgradeButton();
+        }
+
+        private void SetProgress(long received, long total)
+        {
+            Ui(() =>
+            {
+                ProgressWrap.Visibility = Visibility.Visible;
+                double pct = total > 0 ? (double)received / total : 0;
+                ProgressFill.Width = Math.Max(0, ProgressFill.ActualWidth * pct);
+                ProgressText.Text = total > 0
+                    ? string.Format("{0:F0}%  {1:F0}/{2:F0} MB", pct * 100, received / 1048576.0, total / 1048576.0)
+                    : string.Format("{0:F0} MB", received / 1048576.0);
+            });
+        }
+
+        private static bool IsNewer(string a, string b)
+        {
+            try { return new Version(a) > new Version(b); }
+            catch { return false; }
         }
 
         // ================= 日志 =================
@@ -402,13 +697,36 @@ namespace GreenChrome
             UpdateLogCount();
         }
 
+        /// <summary>
+        /// 把所有 UI 操作切回 UI 线程。
+        /// 下载/解包在后台线程跑，任何回调都不能直接碰控件。
+        /// </summary>
+        private void Ui(Action action)
+        {
+            if (action == null) return;
+            var disp = Dispatcher;
+            if (disp == null) return;
+            try
+            {
+                if (disp.CheckAccess()) action();
+                else disp.Invoke(action);
+            }
+            catch (Exception)
+            {
+                // 窗口已关闭 / 正在退出时忽略，避免后台任务把进程炸掉
+            }
+        }
+
         public void AddLog(string text)
         {
-            if (LogList == null) return;
-            LogList.Items.Add("[" + DateTime.Now.ToString("HH:mm:ss") + "] " + text);
-            if (LogList.Items.Count > 0)
-                LogList.ScrollIntoView(LogList.Items[LogList.Items.Count - 1]);
-            UpdateLogCount();
+            Ui(() =>
+            {
+                if (LogList == null) return;
+                LogList.Items.Add("[" + DateTime.Now.ToString("HH:mm:ss") + "] " + text);
+                if (LogList.Items.Count > 0)
+                    LogList.ScrollIntoView(LogList.Items[LogList.Items.Count - 1]);
+                UpdateLogCount();
+            });
         }
 
         private void UpdateLogCount()
@@ -419,10 +737,13 @@ namespace GreenChrome
         // ================= 状态行 =================
         private void SetStatus(string text, string colorKey)
         {
-            StatusText.Text = text;
-            var brush = (SolidColorBrush)FindResource(colorKey);
-            StatusText.Foreground = brush;
-            StatusDot.Fill = brush;
+            Ui(() =>
+            {
+                StatusText.Text = text;
+                var brush = (SolidColorBrush)FindResource(colorKey);
+                StatusText.Foreground = brush;
+                StatusDot.Fill = brush;
+            });
         }
 
         // ================= 目录选择 =================
