@@ -50,6 +50,12 @@ namespace GreenChrome.UI
                 dlg.Width = owner.ActualWidth;
                 dlg.Height = owner.ActualHeight;
             }
+            else
+            {
+                // 无父窗口时按内容自适应高度
+                dlg.Width = 440;
+                dlg.SizeToContent = SizeToContent.Height;
+            }
 
             dlg.TitleText.Text = title ?? "";
             dlg.MessageText.Text = message ?? "";

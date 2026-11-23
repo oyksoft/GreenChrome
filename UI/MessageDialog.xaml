@@ -6,8 +6,7 @@
         Background="Transparent"
         ShowInTaskbar="False"
         WindowStartupLocation="CenterOwner"
-        SizeToContent="Height"
-        Width="440"
+        Width="440" Height="400"
         FontFamily="{StaticResource UiFont}"
         UseLayoutRounding="True">
 
@@ -18,7 +17,7 @@
                 HorizontalAlignment="Center" VerticalAlignment="Center"
                 Width="420">
             <Border.Effect>
-                <DropShadowEffect BlurRadius="24" ShadowDepth="2" Opacity="0.18" Color="#000000"/>
+                <DropShadowEffect BlurRadius="18" ShadowDepth="3" Opacity="0.20" Color="#000000"/>
             </Border.Effect>
 
             <StackPanel>

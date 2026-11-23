@@ -35,6 +35,20 @@ namespace GreenChrome
             _uiReady = true;
         }
 
+        /// <summary>把配置里的通道同步到分段控件与版本号高亮。</summary>
+        private void UpdateChannelSelection()
+        {
+            var ch = (_cfg.Channel ?? "stable").ToLowerInvariant();
+            switch (ch)
+            {
+                case "beta":   ChipBeta.IsChecked = true;   break;
+                case "dev":    ChipDev.IsChecked = true;    break;
+                case "canary": ChipCanary.IsChecked = true; break;
+                default:       ChipStable.IsChecked = true; break;
+            }
+            HighlightSelectedChannel();
+        }
+
         /// <summary>按配置里的 channel 选中对应 chip（初始化阶段不落盘）。</summary>
         private void SyncChannelChips()
         {
@@ -156,46 +170,71 @@ namespace GreenChrome
         // ================= 首次绑定 =================
         private void BtnPickExisting_Click(object sender, RoutedEventArgs e)
         {
-            var path = PickDirectory();
+            var path = PickExistingGreenDir();
             if (string.IsNullOrEmpty(path))
                 return;
-
-            if (!Detector.IsGreenChromeDir(path))
-            {
-                AddLog("目录 " + path + " 里没找到 App\\chrome.exe，不是绿色版 Chrome");
-                MessageDialog.Show(this, DialogKind.Warn, "不是绿色版 Chrome",
-                    "目录：" + path + "\n\n里面没找到 App\\chrome.exe，\n这不是一套绿色版 Chrome。\n\n请重新选择，或先用「从零制作一套」。");
-                return;
-            }
 
             BindDirectory(path);
         }
 
         private async void BtnMakeFresh_Click(object sender, RoutedEventArgs e)
         {
-            var path = PickDirectory();
-            if (string.IsNullOrEmpty(path))
-                return;
-
-            // 安全校验：不接受已有绿色版、不接受非空目录、不接受与已绑定目录重叠
-            var reason = ChromeUpdater.ValidateFreshTarget(path, _cfg.ChromeDir);
-            if (reason != null)
+            // ---------- 第一步：选通道 ----------
+            AddLog("正在获取各通道的线上版本…");
+            Dictionary<string, ReleaseInfo> online = null;
+            try
             {
-                AddLog("不能在这个目录制作：" + path);
-                MessageDialog.Show(this, DialogKind.Warn, "换个目录", reason + "\n\n选中的目录：\n" + path);
+                online = await Task.Run(() => CoiClient.Fetch(_cfg.Api));
+            }
+            catch (Exception ex)
+            {
+                AddLog("获取线上版本失败：" + ex.Message);
+                MessageDialog.Show(this, DialogKind.Error, "无法获取版本信息",
+                    "获取线上版本失败，制作需要先知道要下载哪个版本。\n\n" + ex.Message);
                 return;
             }
 
-            var channel = string.IsNullOrEmpty(_cfg.Channel) ? "stable" : _cfg.Channel;
+            var channel = UI.ChannelPicker.Pick(this, online, _cfg.Channel);
+            if (string.IsNullOrEmpty(channel))
+            {
+                AddLog("已取消制作");
+                return;
+            }
+            AddLog("选择了通道 " + channel.ToUpperInvariant());
+
+            // ---------- 第二步：选目录（选错了可以一直重选） ----------
+            var path = PickFreshTargetDir();
+            if (string.IsNullOrEmpty(path))
+            {
+                AddLog("已取消制作");
+                return;
+            }
+
+            // ---------- 第三步：确认 ----------
+            var relPreview = CoiClient.Find(online, channel, "x64");
+            var sizeText = (relPreview != null && relPreview.IsUsable)
+                ? (relPreview.size / 1048576.0).ToString("F0") + " MB"
+                : "未知";
+            var verText = (relPreview != null && relPreview.IsUsable) ? relPreview.version : "未知";
+
             if (!MessageDialog.Confirm(this, DialogKind.Info, "从零制作一套",
                 "将在下面这个目录里制作一套全新的绿色版 Chrome：\n\n" + path +
                 "\n\n· 通道：" + channel.ToUpperInvariant() +
-                "\n· 需要下载约 540 MB 官方离线包" +
+                "\n· 版本：" + verText +
+                "\n· 需要下载约 " + sizeText + " 官方离线包" +
                 "\n· 会写入 App\\<版本>\\、App\\chrome.exe、Chrome++" +
                 "\n· 现有其它目录不会被改动" +
                 "\n\n过程中请勿关闭窗口。现在开始吗？",
                 "开始制作", "取消"))
                 return;
+
+            // 记住这次选的通道
+            if (!string.Equals(_cfg.Channel, channel, StringComparison.OrdinalIgnoreCase))
+            {
+                _cfg.Channel = channel;
+                try { _cfg.Save(); } catch { }
+                UpdateChannelSelection();
+            }
 
             _cancel = new CancellationTokenSource();
             BtnPickExisting.IsEnabled = false;
@@ -207,8 +246,7 @@ namespace GreenChrome
 
             try
             {
-                var data = await Task.Run(() => CoiClient.Fetch(_cfg.Api));
-                var rel = CoiClient.Find(data, channel, "x64");
+                var rel = CoiClient.Find(online, channel, "x64");
                 if (rel == null || !rel.IsUsable)
                 {
                     MessageDialog.Show(this, DialogKind.Warn, "无可用版本",
@@ -288,17 +326,9 @@ namespace GreenChrome
         // ================= 仪表盘操作 =================
         private void BtnChangeDir_Click(object sender, RoutedEventArgs e)
         {
-            var path = PickDirectory();
+            var path = PickExistingGreenDir();
             if (string.IsNullOrEmpty(path))
                 return;
-
-            if (!Detector.IsGreenChromeDir(path))
-            {
-                AddLog("目录 " + path + " 里没找到 App\\chrome.exe，不是绿色版 Chrome");
-                MessageDialog.Show(this, DialogKind.Warn, "不是绿色版 Chrome",
-                    "目录：" + path + "\n\n里面没找到 App\\chrome.exe，\n这不是一套绿色版 Chrome。");
-                return;
-            }
 
             BindDirectory(path);
         }
@@ -747,15 +777,67 @@ namespace GreenChrome
         }
 
         // ================= 目录选择 =================
-        private string PickDirectory()
+        /// <summary>
+        /// 弹出系统原生的「选择文件夹」对话框（自带新建文件夹、地址栏、搜索）。
+        /// </summary>
+        private string PickDirectory(string title = "选择绿色版 Chrome 所在目录", string initialPath = "")
         {
-            var picker = new DirectoryPicker
+            string picked;
+            if (!UI.FolderPicker.Show(this, title, initialPath, out picked))
+                return "";
+            return picked ?? "";
+        }
+
+        /// <summary>
+        /// 选一个「绿色版 Chrome 已存在」的目录。
+        /// 选错了可以接着重选，直到选对或主动取消。
+        /// </summary>
+        private string PickExistingGreenDir()
+        {
+            while (true)
             {
-                Owner = this,
-                InitialPath = ""
-            };
-            picker.ShowDialog();
-            return picker.SelectedPath ?? "";
+                var path = PickDirectory();
+                if (string.IsNullOrEmpty(path))
+                    return "";   // 用户取消
+
+                if (Detector.IsGreenChromeDir(path))
+                    return path;
+
+                AddLog("目录 " + path + " 里没找到 App\\chrome.exe，不是绿色版 Chrome");
+                var again = MessageDialog.Confirm(this, DialogKind.Warn, "不是绿色版 Chrome",
+                    "目录：" + path + "\n\n里面没找到 App\\chrome.exe，\n这不是一套绿色版 Chrome。\n\n是否重新选择一个目录？",
+                    "重新选择", "取消");
+                if (!again)
+                    return "";
+            }
+        }
+
+        /// <summary>
+        /// 选一个「可以放新绿色版」的目录（必须空或不存在）。
+        /// 选错了可以接着重选，直到选对或主动取消。
+        /// </summary>
+        private string PickFreshTargetDir()
+        {
+            var hint = "";
+            while (true)
+            {
+                var path = PickDirectory("选择新绿色版 Chrome 要放置的目录（可点「新建文件夹」创建一个空目录）", hint);
+                if (string.IsNullOrEmpty(path))
+                    return "";   // 用户取消
+
+                var reason = ChromeUpdater.ValidateFreshTarget(path, _cfg.ChromeDir);
+                if (reason == null)
+                    return path;
+
+                AddLog("不能在这个目录制作：" + path);
+                var again = MessageDialog.Confirm(this, DialogKind.Warn, "这个目录不行",
+                    reason + "\n\n选中的目录：\n" + path +
+                    "\n\n是否重新选择一个目录？（在对话框里可以点「新建文件夹」建一个空目录）",
+                    "重新选择", "取消");
+                if (!again)
+                    return "";
+                hint = path;
+            }
         }
     }
 }

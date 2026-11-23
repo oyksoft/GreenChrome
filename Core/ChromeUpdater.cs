@@ -171,7 +171,18 @@ namespace GreenChrome.Core
             if (string.IsNullOrWhiteSpace(dir))
                 return "请选择一个目录";
 
-            var full = Path.GetFullPath(dir).TrimEnd('\\', '/');
+            // 网络路径 / 非法路径时 GetFullPath 可能抛异常，统一当作“不合格”处理
+            string full;
+            try
+            {
+                full = Path.GetFullPath(dir).TrimEnd('\\', '/');
+            }
+            catch (Exception ex)
+            {
+                return "这个路径无法使用：" + ex.Message;
+            }
+            if (full.Length == 0)
+                return "请选择一个目录";
 
             // 已有绿色版就直接拒绝：那是「应用到」的活，不该重建
             if (Detector.IsGreenChromeDir(full))
@@ -180,7 +191,15 @@ namespace GreenChrome.Core
             // 和当前已绑定的目录重合（本身 / 父目录 / 子目录）都要拒绝
             if (!string.IsNullOrEmpty(currentBoundDir))
             {
-                var bound = Path.GetFullPath(currentBoundDir).TrimEnd('\\', '/');
+                string bound;
+                try
+                {
+                    bound = Path.GetFullPath(currentBoundDir).TrimEnd('\\', '/');
+                }
+                catch
+                {
+                    bound = currentBoundDir.TrimEnd('\\', '/');
+                }
                 if (string.Equals(full, bound, StringComparison.OrdinalIgnoreCase))
                     return "这就是当前已绑定的绿色版目录，不能在这里重建。";
                 if (bound.StartsWith(full + "\\", StringComparison.OrdinalIgnoreCase))
