@@ -323,7 +323,9 @@
             </Grid>
 
             <!-- 关于页 -->
-            <Grid Grid.Row="0" x:Name="PageAbout" Margin="28,28,28,16" Visibility="Collapsed">
+            <ScrollViewer Grid.Row="0" x:Name="PageAbout" Margin="0" Visibility="Collapsed"
+                          VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+            <Grid Margin="28,28,28,16">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
@@ -345,7 +347,6 @@
                             <TextBlock FontSize="13.5" Foreground="{StaticResource ColText}" Margin="0,0,0,4" Text="· 自动检测本机绿色版版本，与线上最新版本对比；"/>
                             <TextBlock FontSize="13.5" Foreground="{StaticResource ColText}" Margin="0,0,0,4" Text="· 需要时下载、校验、解包，升级到新版本；"/>
                             <TextBlock FontSize="13.5" Foreground="{StaticResource ColText}" Margin="0,0,0,4" Text="· 所有文件同在一个目录，不写注册表、不安装、可整体移动。"/>
-                            <TextBlock FontSize="13.5" Foreground="{StaticResource ColTextMuted}" Margin="0,6,0,0"><Run Text="版本来源："/><Hyperlink x:Name="ApiLinkAbout" RequestNavigate="Hyperlink_RequestNavigate"><Run Text="https://coi.oyk.pub/api" Foreground="{StaticResource ColAccent}"/></Hyperlink></TextBlock>
                         </StackPanel>
                         <Grid>
                             <Grid.ColumnDefinitions>
@@ -369,27 +370,43 @@
                         </Grid>
 
                         <!-- 配置文件说明 -->
-                        <Grid Margin="0,20,0,0">
+                        <Grid Margin="0,24,0,0">
                             <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
                                 <ColumnDefinition Width="Auto"/>
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
                             <Grid.RowDefinitions>
-                                <RowDefinition Height="30"/>
-                                <RowDefinition Height="30"/>
-                                <RowDefinition Height="30"/>
-                                <RowDefinition Height="30"/>
-                                <RowDefinition Height="30"/>
-                                <RowDefinition Height="30"/>
-                                <RowDefinition Height="30"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
                             </Grid.RowDefinitions>
 
-                            <TextBlock Grid.Row="0" Grid.Column="0" Text="配置文件" Style="{StaticResource KvKey}"/>
-                            <TextBlock Grid.Row="0" Grid.Column="1" x:Name="ConfPathText" Text=""
-                                       Style="{StaticResource KvVal}" TextTrimming="CharacterEllipsis"
-                                       VerticalAlignment="Center"/>
-                            <StackPanel Grid.Row="0" Grid.Column="2" Orientation="Horizontal">
+                            <!-- 表头 -->
+                            <TextBlock Grid.Row="0" Grid.Column="0" Text="状态" Style="{StaticResource ConfKey}"
+                                       Foreground="{StaticResource ColTextMuted}" Margin="0,0,14,0"/>
+                            <TextBlock Grid.Row="0" Grid.Column="1" Text="字段" Style="{StaticResource ConfKey}"
+                                       Foreground="{StaticResource ColTextMuted}" Margin="0,0,14,0"/>
+                            <TextBlock Grid.Row="0" Grid.Column="2" Text="说明" Style="{StaticResource ConfKey}"
+                                       Foreground="{StaticResource ColTextMuted}"/>
+                            <TextBlock Grid.Row="0" Grid.Column="3" Text="" Style="{StaticResource ConfKey}"/>
+
+                            <!-- 配置文件路径 -->
+                            <Border Grid.Row="1" Grid.Column="0" Style="{StaticResource ConfBadge}"
+                                    Background="{StaticResource ColAccentBg}">
+                                <TextBlock Text="文件" FontSize="11" Foreground="{StaticResource ColAccent}"/>
+                            </Border>
+                            <TextBlock Grid.Row="1" Grid.Column="1" Text="greenchrome.conf"
+                                       Style="{StaticResource ConfKey}"/>
+                            <TextBlock Grid.Row="1" Grid.Column="2" x:Name="ConfPathText" Text=""
+                                       Style="{StaticResource ConfDesc}" TextTrimming="CharacterEllipsis"
+                                       Margin="0,2,0,11"/>
+                            <StackPanel Grid.Row="1" Grid.Column="3" Orientation="Horizontal" VerticalAlignment="Top">
                                 <Button Content="用记事本打开" Height="26" MinWidth="96" Padding="10,0"
                                         FontSize="11.5" Style="{StaticResource SecondaryButton}"
                                         Click="BtnOpenConfig_Click"/>
@@ -398,42 +415,65 @@
                                         Margin="8,0,0,0" Click="BtnOpenConfigDir_Click"/>
                             </StackPanel>
 
-                            <TextBlock Grid.Row="1" Grid.Column="0" Text="chromeDir" Style="{StaticResource KvKey}"/>
-                            <TextBlock Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2"
-                                       Style="{StaticResource KvVal}" TextWrapping="Wrap" LineHeight="20"
-                                       Text="绑定的绿色版 Chrome 目录（界面上的「更换目录」也会写这里）"/>
+                            <!-- chromeDir -->
+                            <Border Grid.Row="2" Grid.Column="0" Style="{StaticResource ConfBadge}"
+                                    Background="{StaticResource ColAccentBg}">
+                                <TextBlock Text="生效" FontSize="11" Foreground="{StaticResource ColAccent}"/>
+                            </Border>
+                            <TextBlock Grid.Row="2" Grid.Column="1" Text="chromeDir" Style="{StaticResource ConfKey}"/>
+                            <TextBlock Grid.Row="2" Grid.Column="2" Grid.ColumnSpan="2"
+                                       Style="{StaticResource ConfDesc}"
+                                       Text="绑定的绿色版 Chrome 目录。界面上的「更换目录」「从零制作一套」也会写这里。"/>
 
-                            <TextBlock Grid.Row="2" Grid.Column="0" Text="channel" Style="{StaticResource KvKey}"/>
-                            <TextBlock Grid.Row="2" Grid.Column="1" Grid.ColumnSpan="2"
-                                       Style="{StaticResource KvVal}" TextWrapping="Wrap" LineHeight="20"
-                                       Text="通道：stable / beta / dev / canary（界面切换也会写这里）"/>
+                            <!-- channel -->
+                            <Border Grid.Row="3" Grid.Column="0" Style="{StaticResource ConfBadge}"
+                                    Background="{StaticResource ColAccentBg}">
+                                <TextBlock Text="生效" FontSize="11" Foreground="{StaticResource ColAccent}"/>
+                            </Border>
+                            <TextBlock Grid.Row="3" Grid.Column="1" Text="channel" Style="{StaticResource ConfKey}"/>
+                            <TextBlock Grid.Row="3" Grid.Column="2" Grid.ColumnSpan="2"
+                                       Style="{StaticResource ConfDesc}"
+                                       Text="通道：stable / beta / dev / canary。界面上的通道切换会立即写这里。"/>
 
-                            <TextBlock Grid.Row="3" Grid.Column="0" Text="api" Style="{StaticResource KvKey}"/>
-                            <TextBlock Grid.Row="3" Grid.Column="1" Grid.ColumnSpan="2"
-                                       Style="{StaticResource KvVal}" TextWrapping="Wrap" LineHeight="20"
-                                       Text="版本来源接口，默认 https://coi.oyk.pub/api"/>
+                            <!-- ghMirrors -->
+                            <Border Grid.Row="4" Grid.Column="0" Style="{StaticResource ConfBadge}"
+                                    Background="{StaticResource ColAccentBg}">
+                                <TextBlock Text="生效" FontSize="11" Foreground="{StaticResource ColAccent}"/>
+                            </Border>
+                            <TextBlock Grid.Row="4" Grid.Column="1" Text="ghMirrors" Style="{StaticResource ConfKey}"/>
+                            <TextBlock Grid.Row="4" Grid.Column="2" Grid.ColumnSpan="2"
+                                       Style="{StaticResource ConfDesc}"
+                                       Text="GitHub 国内镜像前缀列表，Chrome++ 下载时先试镜像再试官方。写 [] 则只走官方。"/>
 
-                            <TextBlock Grid.Row="4" Grid.Column="0" Text="ghMirrors" Style="{StaticResource KvKey}"/>
-                            <TextBlock Grid.Row="4" Grid.Column="1" Grid.ColumnSpan="2"
-                                       Style="{StaticResource KvVal}" TextWrapping="Wrap" LineHeight="20"
-                                       Text="GitHub 国内镜像前缀列表（Chrome++ 下载用），先镜像后官方；写 [] 则只走官方"/>
+                            <!-- proxy -->
+                            <Border Grid.Row="5" Grid.Column="0" Style="{StaticResource ConfBadge}"
+                                    Background="{StaticResource ColBorder}">
+                                <TextBlock Text="预留" FontSize="11" Foreground="{StaticResource ColTextMuted}"/>
+                            </Border>
+                            <TextBlock Grid.Row="5" Grid.Column="1" Text="proxy" Style="{StaticResource ConfKey}"
+                                       Foreground="{StaticResource ColTextMuted}"/>
+                            <TextBlock Grid.Row="5" Grid.Column="2" Grid.ColumnSpan="2"
+                                       Style="{StaticResource ConfDesc}"
+                                       Text="预留字段，当前版本未使用（下载走镜像与直连，不需要代理）。"/>
 
-                            <TextBlock Grid.Row="5" Grid.Column="0" Text="proxy" Style="{StaticResource KvKey}"/>
-                            <TextBlock Grid.Row="5" Grid.Column="1" Grid.ColumnSpan="2"
-                                       Style="{StaticResource KvVal}" TextWrapping="Wrap" LineHeight="20"
-                                       Text="预留，当前版本未使用（下载走镜像与直连）"/>
-
-                            <TextBlock Grid.Row="6" Grid.Column="0" Text="autoCheck" Style="{StaticResource KvKey}"/>
-                            <TextBlock Grid.Row="6" Grid.Column="1" Grid.ColumnSpan="2"
-                                       Style="{StaticResource KvVal}" TextWrapping="Wrap" LineHeight="20"
-                                       Text="预留，当前版本未使用（启动不自动联网，只有点「检查更新」才请求）"/>
+                            <!-- autoCheck -->
+                            <Border Grid.Row="6" Grid.Column="0" Style="{StaticResource ConfBadge}"
+                                    Background="{StaticResource ColBorder}">
+                                <TextBlock Text="预留" FontSize="11" Foreground="{StaticResource ColTextMuted}"/>
+                            </Border>
+                            <TextBlock Grid.Row="6" Grid.Column="1" Text="autoCheck" Style="{StaticResource ConfKey}"
+                                       Foreground="{StaticResource ColTextMuted}"/>
+                            <TextBlock Grid.Row="6" Grid.Column="2" Grid.ColumnSpan="2"
+                                       Style="{StaticResource ConfDesc}"
+                                       Text="预留字段，当前版本未使用（启动不自动联网，只有点「检查更新」才请求）。"/>
                         </Grid>
                     </StackPanel>
                 </Border>
             </Grid>
+            </ScrollViewer>
 
             <!-- 运行日志 -->
-            <Border Grid.Row="1" Style="{StaticResource Card}" Margin="28,0,28,24">
+            <Border Grid.Row="1" x:Name="LogCard" Style="{StaticResource Card}" Margin="28,0,28,24">
                 <Grid>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>

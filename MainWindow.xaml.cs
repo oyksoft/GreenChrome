@@ -125,6 +125,9 @@ namespace GreenChrome
             PageDashboard.Visibility = (bound && !showAbout) ? Visibility.Visible : Visibility.Collapsed;
             PageAbout.Visibility = showAbout ? Visibility.Visible : Visibility.Collapsed;
 
+            // 关于页不显示运行日志（内容已经够长了）
+            LogCard.Visibility = showAbout ? Visibility.Collapsed : Visibility.Visible;
+
             UpdateApiLink();
 
             if (bound)
@@ -136,7 +139,7 @@ namespace GreenChrome
         /// </summary>
         private void UpdateApiLink()
         {
-            var api = string.IsNullOrWhiteSpace(_cfg.Api) ? AppConfig.DefaultApi : _cfg.Api;
+            var api = AppConfig.DefaultApi;
             Uri site;
             try
             {
@@ -151,14 +154,7 @@ namespace GreenChrome
             if (ApiLink != null)
             {
                 ApiLink.NavigateUri = site;
-                ApiLink.ToolTip = "打开 " + site + "\\n版本来源：" + api;
-            }
-            if (ApiLinkAbout != null)
-            {
-                Uri full;
-                try { full = new Uri(api); } catch { full = site; }
-                ApiLinkAbout.NavigateUri = full;
-                ApiLinkAbout.ToolTip = "打开 " + full;
+                ApiLink.ToolTip = "打开 " + site + "\n版本来源：" + api;
             }
         }
 
@@ -234,7 +230,7 @@ namespace GreenChrome
             Dictionary<string, ReleaseInfo> online = null;
             try
             {
-                online = await Task.Run(() => CoiClient.Fetch(_cfg.Api));
+                online = await Task.Run(() => CoiClient.Fetch(AppConfig.DefaultApi));
             }
             catch (Exception ex)
             {
@@ -520,7 +516,7 @@ namespace GreenChrome
             {
                 // Chrome 与 Chrome++ 并行检查；Chrome++ 失败不影响主流程
                 var cppTask = Task.Run(() => ChromePlusClient.FetchLatest(_cfg.MirrorList, m => AddLog(m)));
-                var data = await Task.Run(() => CoiClient.Fetch(_cfg.Api));
+                var data = await Task.Run(() => CoiClient.Fetch(AppConfig.DefaultApi));
                 _cppRelease = await cppTask;         // 失败时为 null，静默降级
                 if (_cppRelease != null)
                 {

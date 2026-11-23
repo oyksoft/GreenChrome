@@ -25,8 +25,11 @@ namespace GreenChrome.Core
         [JsonProperty("channel")]
         public string Channel { get; set; }
 
-        /// <summary>版本来源。</summary>
-        [JsonProperty("api")]
+        /// <summary>
+        /// 版本来源。固定使用 <see cref="DefaultApi"/>，不需要用户配置；
+        /// 这个属性只为与 Go 版共用同一份配置文件而保留，不写入文件。
+        /// </summary>
+        [JsonProperty("api", NullValueHandling = NullValueHandling.Ignore)]
         public string Api { get; set; }
 
         /// <summary>
@@ -74,7 +77,7 @@ namespace GreenChrome.Core
         {
             ChromeDir = "";
             Channel = DefaultChannel;
-            Api = DefaultApi;
+            Api = null;          // 固定用 DefaultApi，不写入配置文件
             Proxy = "";
             AutoCheck = false;
         }
@@ -122,7 +125,7 @@ namespace GreenChrome.Core
 
             // 用默认值补全缺失字段（与 Go 版一致）
             if (string.IsNullOrEmpty(cfg.Channel)) cfg.Channel = DefaultChannel;
-            if (string.IsNullOrEmpty(cfg.Api)) cfg.Api = DefaultApi;
+            cfg.Api = null;   // 固定用 DefaultApi，不从文件里读
             if (cfg.ChromeDir == null) cfg.ChromeDir = "";
             if (cfg.Proxy == null) cfg.Proxy = "";
             return cfg;
@@ -131,7 +134,14 @@ namespace GreenChrome.Core
         /// <summary>写入配置（缩进格式，便于用户查看与手改）。</summary>
         public void Save()
         {
-            var json = JsonConvert.SerializeObject(this, Formatting.Indented);
+            // NullValueHandling / DefaultValueHandling 都忽略：
+            // 未使用的字段（api/proxy/autoCheck）与空值不会写进配置文件
+            var json = JsonConvert.SerializeObject(this, Formatting.Indented,
+                new JsonSerializerSettings
+                {
+                    NullValueHandling = NullValueHandling.Ignore,
+                    DefaultValueHandling = DefaultValueHandling.Ignore
+                });
             File.WriteAllText(FilePath, json + "\n", new UTF8Encoding(false));
         }
     }
