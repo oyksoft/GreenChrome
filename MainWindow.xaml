@@ -369,10 +369,9 @@
                             <TextBlock Grid.Row="3" Grid.Column="1" Text="MIT" Style="{StaticResource KvVal}"/>
                         </Grid>
 
-                        <!-- 配置文件说明 -->
+                        <!-- 配置文件 -->
                         <Grid Margin="0,24,0,0">
                             <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="Auto"/>
                                 <ColumnDefinition Width="Auto"/>
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="Auto"/>
@@ -380,93 +379,78 @@
                             <Grid.RowDefinitions>
                                 <RowDefinition Height="Auto"/>
                                 <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
                             </Grid.RowDefinitions>
 
-                            <!-- 表头 -->
-                            <TextBlock Grid.Row="0" Grid.Column="0" Text="状态" Style="{StaticResource ConfKey}"
-                                       Foreground="{StaticResource ColTextMuted}" Margin="0,0,14,0"/>
-                            <TextBlock Grid.Row="0" Grid.Column="1" Text="字段" Style="{StaticResource ConfKey}"
-                                       Foreground="{StaticResource ColTextMuted}" Margin="0,0,14,0"/>
-                            <TextBlock Grid.Row="0" Grid.Column="2" Text="说明" Style="{StaticResource ConfKey}"
-                                       Foreground="{StaticResource ColTextMuted}"/>
-                            <TextBlock Grid.Row="0" Grid.Column="3" Text="" Style="{StaticResource ConfKey}"/>
-
-                            <!-- 配置文件路径 -->
-                            <Border Grid.Row="1" Grid.Column="0" Style="{StaticResource ConfBadge}"
-                                    Background="{StaticResource ColAccentBg}">
-                                <TextBlock Text="文件" FontSize="11" Foreground="{StaticResource ColAccent}"/>
-                            </Border>
-                            <TextBlock Grid.Row="1" Grid.Column="1" Text="greenchrome.conf"
-                                       Style="{StaticResource ConfKey}"/>
-                            <TextBlock Grid.Row="1" Grid.Column="2" x:Name="ConfPathText" Text=""
-                                       Style="{StaticResource ConfDesc}" TextTrimming="CharacterEllipsis"
-                                       Margin="0,2,0,11"/>
-                            <StackPanel Grid.Row="1" Grid.Column="3" Orientation="Horizontal" VerticalAlignment="Top">
-                                <Button Content="用记事本打开" Height="26" MinWidth="96" Padding="10,0"
-                                        FontSize="11.5" Style="{StaticResource SecondaryButton}"
+                            <TextBlock Grid.Row="0" Grid.Column="0" Text="配置文件" FontSize="13.5"
+                                       FontWeight="Medium" Foreground="{StaticResource ColText}"
+                                       VerticalAlignment="Center"/>
+                            <TextBlock Grid.Row="0" Grid.Column="1" x:Name="ConfPathText" Text=""
+                                       FontSize="13" Foreground="{StaticResource ColTextMuted}"
+                                       Margin="12,0,12,0" VerticalAlignment="Center"
+                                       TextTrimming="CharacterEllipsis"/>
+                            <StackPanel Grid.Row="0" Grid.Column="2" Orientation="Horizontal"
+                                        VerticalAlignment="Center">
+                                <Button Content="用记事本打开" Height="28" MinWidth="100" Padding="12,0"
+                                        FontSize="12" Style="{StaticResource SecondaryButton}"
                                         Click="BtnOpenConfig_Click"/>
-                                <Button Content="打开所在目录" Height="26" MinWidth="96" Padding="10,0"
-                                        FontSize="11.5" Style="{StaticResource SecondaryButton}"
+                                <Button Content="打开所在目录" Height="28" MinWidth="100" Padding="12,0"
+                                        FontSize="12" Style="{StaticResource SecondaryButton}"
                                         Margin="8,0,0,0" Click="BtnOpenConfigDir_Click"/>
                             </StackPanel>
-
-                            <!-- chromeDir -->
-                            <Border Grid.Row="2" Grid.Column="0" Style="{StaticResource ConfBadge}"
-                                    Background="{StaticResource ColAccentBg}">
-                                <TextBlock Text="生效" FontSize="11" Foreground="{StaticResource ColAccent}"/>
-                            </Border>
-                            <TextBlock Grid.Row="2" Grid.Column="1" Text="chromeDir" Style="{StaticResource ConfKey}"/>
-                            <TextBlock Grid.Row="2" Grid.Column="2" Grid.ColumnSpan="2"
-                                       Style="{StaticResource ConfDesc}"
-                                       Text="绑定的绿色版 Chrome 目录。界面上的「更换目录」「从零制作一套」也会写这里。"/>
-
-                            <!-- channel -->
-                            <Border Grid.Row="3" Grid.Column="0" Style="{StaticResource ConfBadge}"
-                                    Background="{StaticResource ColAccentBg}">
-                                <TextBlock Text="生效" FontSize="11" Foreground="{StaticResource ColAccent}"/>
-                            </Border>
-                            <TextBlock Grid.Row="3" Grid.Column="1" Text="channel" Style="{StaticResource ConfKey}"/>
-                            <TextBlock Grid.Row="3" Grid.Column="2" Grid.ColumnSpan="2"
-                                       Style="{StaticResource ConfDesc}"
-                                       Text="通道：stable / beta / dev / canary。界面上的通道切换会立即写这里。"/>
-
-                            <!-- ghMirrors -->
-                            <Border Grid.Row="4" Grid.Column="0" Style="{StaticResource ConfBadge}"
-                                    Background="{StaticResource ColAccentBg}">
-                                <TextBlock Text="生效" FontSize="11" Foreground="{StaticResource ColAccent}"/>
-                            </Border>
-                            <TextBlock Grid.Row="4" Grid.Column="1" Text="ghMirrors" Style="{StaticResource ConfKey}"/>
-                            <TextBlock Grid.Row="4" Grid.Column="2" Grid.ColumnSpan="2"
-                                       Style="{StaticResource ConfDesc}"
-                                       Text="GitHub 国内镜像前缀列表，Chrome++ 下载时先试镜像再试官方。写 [] 则只走官方。"/>
-
-                            <!-- proxy -->
-                            <Border Grid.Row="5" Grid.Column="0" Style="{StaticResource ConfBadge}"
-                                    Background="{StaticResource ColBorder}">
-                                <TextBlock Text="预留" FontSize="11" Foreground="{StaticResource ColTextMuted}"/>
-                            </Border>
-                            <TextBlock Grid.Row="5" Grid.Column="1" Text="proxy" Style="{StaticResource ConfKey}"
-                                       Foreground="{StaticResource ColTextMuted}"/>
-                            <TextBlock Grid.Row="5" Grid.Column="2" Grid.ColumnSpan="2"
-                                       Style="{StaticResource ConfDesc}"
-                                       Text="预留字段，当前版本未使用（下载走镜像与直连，不需要代理）。"/>
-
-                            <!-- autoCheck -->
-                            <Border Grid.Row="6" Grid.Column="0" Style="{StaticResource ConfBadge}"
-                                    Background="{StaticResource ColBorder}">
-                                <TextBlock Text="预留" FontSize="11" Foreground="{StaticResource ColTextMuted}"/>
-                            </Border>
-                            <TextBlock Grid.Row="6" Grid.Column="1" Text="autoCheck" Style="{StaticResource ConfKey}"
-                                       Foreground="{StaticResource ColTextMuted}"/>
-                            <TextBlock Grid.Row="6" Grid.Column="2" Grid.ColumnSpan="2"
-                                       Style="{StaticResource ConfDesc}"
-                                       Text="预留字段，当前版本未使用（启动不自动联网，只有点「检查更新」才请求）。"/>
                         </Grid>
+
+                        <!-- 配置字段说明 -->
+                        <Border Margin="0,12,0,0" Background="#F7F8FA" CornerRadius="10"
+                                BorderBrush="{StaticResource ColBorder}" BorderThickness="1" Padding="20,14,20,12">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="16"/>
+                                    <ColumnDefinition Width="104"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
+
+                                <!-- 表头 -->
+                                <TextBlock Grid.Row="0" Grid.Column="1" Text="字段" Style="{StaticResource ConfHead}"/>
+                                <TextBlock Grid.Row="0" Grid.Column="2" Text="说明" Style="{StaticResource ConfHead}"/>
+                                <Border Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="3" Height="1"
+                                        VerticalAlignment="Bottom" Margin="0,0,0,8"
+                                        Background="{StaticResource ColBorder}"/>
+
+                            <Ellipse Grid.Row="1" Grid.Column="0" Width="6" Height="6"
+                                     VerticalAlignment="Top" Margin="1,8,0,0" Fill="{StaticResource ColAccent}"/>
+                            <TextBlock Grid.Row="1" Grid.Column="1" Text="chromeDir" Style="{StaticResource ConfKey}"/>
+                            <TextBlock Grid.Row="1" Grid.Column="2" Style="{StaticResource ConfDesc}"
+                                       Text="绑定的绿色版 Chrome 目录。界面上的「更换目录」「从零制作一套」也会写这里。"/>
+                            <Ellipse Grid.Row="2" Grid.Column="0" Width="6" Height="6"
+                                     VerticalAlignment="Top" Margin="1,8,0,0" Fill="{StaticResource ColAccent}"/>
+                            <TextBlock Grid.Row="2" Grid.Column="1" Text="channel" Style="{StaticResource ConfKey}"/>
+                            <TextBlock Grid.Row="2" Grid.Column="2" Style="{StaticResource ConfDesc}"
+                                       Text="通道：stable / beta / dev / canary。界面上的通道切换会立即写这里。"/>
+                            <Ellipse Grid.Row="3" Grid.Column="0" Width="6" Height="6"
+                                     VerticalAlignment="Top" Margin="1,8,0,0" Fill="{StaticResource ColAccent}"/>
+                            <TextBlock Grid.Row="3" Grid.Column="1" Text="ghMirrors" Style="{StaticResource ConfKey}"/>
+                            <TextBlock Grid.Row="3" Grid.Column="2" Style="{StaticResource ConfDesc}"
+                                       Text="GitHub 国内镜像前缀列表，Chrome++ 下载时先试镜像再试官方。写 [] 则只走官方。"/>
+                            <Ellipse Grid.Row="4" Grid.Column="0" Width="6" Height="6"
+                                     VerticalAlignment="Top" Margin="1,8,0,0" Fill="{StaticResource ColTextMuted}"/>
+                            <TextBlock Grid.Row="4" Grid.Column="1" Text="proxy" Style="{StaticResource ConfKey}" Foreground="{StaticResource ColTextMuted}"/>
+                            <TextBlock Grid.Row="4" Grid.Column="2" Style="{StaticResource ConfDesc}"
+                                       Text="预留字段，当前版本未使用（下载走镜像与直连，不需要代理）。"/>
+                            <Ellipse Grid.Row="5" Grid.Column="0" Width="6" Height="6"
+                                     VerticalAlignment="Top" Margin="1,8,0,0" Fill="{StaticResource ColTextMuted}"/>
+                            <TextBlock Grid.Row="5" Grid.Column="1" Text="autoCheck" Style="{StaticResource ConfKey}" Foreground="{StaticResource ColTextMuted}"/>
+                            <TextBlock Grid.Row="5" Grid.Column="2" Style="{StaticResource ConfDesc}"
+                                       Text="预留字段，当前版本未使用（启动不自动联网，只有点「检查更新」才请求）。"/>
+                            </Grid>
+                        </Border>
                     </StackPanel>
                 </Border>
             </Grid>
