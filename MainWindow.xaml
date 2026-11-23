@@ -137,19 +137,16 @@
                                     <ColumnDefinition Width="*"/>
                                 </Grid.ColumnDefinitions>
                                 <Grid.RowDefinitions>
-                                    <RowDefinition Height="28"/>
-                                    <RowDefinition Height="28"/>
-                                    <RowDefinition Height="28"/>
+                                    <RowDefinition Height="30"/>
+                                    <RowDefinition Height="30"/>
                                     <RowDefinition Height="34"/>
                                 </Grid.RowDefinitions>
                                 <TextBlock Grid.Row="0" Grid.Column="0" Text="版本" Style="{StaticResource KvKey}"/>
                                 <TextBlock Grid.Row="0" Grid.Column="1" x:Name="LocalVersion" Text="未检测" Style="{StaticResource KvVal}"/>
-                                <TextBlock Grid.Row="1" Grid.Column="0" Text="Chrome++" Style="{StaticResource KvKey}"/>
-                                <TextBlock Grid.Row="1" Grid.Column="1" x:Name="LocalChromePlus" Text="未检测" Style="{StaticResource KvVal}"/>
-                                <TextBlock Grid.Row="2" Grid.Column="0" Text="目录" Style="{StaticResource KvKey}"/>
-                                <TextBlock Grid.Row="2" Grid.Column="1" x:Name="LocalDir" Text="" Style="{StaticResource KvVal}" TextTrimming="CharacterEllipsis"/>
-                                <TextBlock Grid.Row="3" Grid.Column="0" Text="通道" Style="{StaticResource KvKey}"/>
-                                <Border Grid.Row="3" Grid.Column="1" Background="#F1F2F4" CornerRadius="7"
+                                <TextBlock Grid.Row="1" Grid.Column="0" Text="目录" Style="{StaticResource KvKey}"/>
+                                <TextBlock Grid.Row="1" Grid.Column="1" x:Name="LocalDir" Text="" Style="{StaticResource KvVal}" TextTrimming="CharacterEllipsis"/>
+                                <TextBlock Grid.Row="2" Grid.Column="0" Text="通道" Style="{StaticResource KvKey}"/>
+                                <Border Grid.Row="2" Grid.Column="1" Background="#F1F2F4" CornerRadius="7"
                                         Padding="2" HorizontalAlignment="Left" VerticalAlignment="Center">
                                     <StackPanel Orientation="Horizontal">
                                         <RadioButton x:Name="ChipStable" Style="{StaticResource ChannelChip}" Content="STABLE"
@@ -182,10 +179,10 @@
                                     <ColumnDefinition Width="*"/>
                                 </Grid.ColumnDefinitions>
                                 <Grid.RowDefinitions>
-                                    <RowDefinition Height="28"/>
-                                    <RowDefinition Height="28"/>
-                                    <RowDefinition Height="28"/>
-                                    <RowDefinition Height="28"/>
+                                    <RowDefinition Height="30"/>
+                                    <RowDefinition Height="30"/>
+                                    <RowDefinition Height="30"/>
+                                    <RowDefinition Height="30"/>
                                 </Grid.RowDefinitions>
                                 <TextBlock Grid.Row="0" Grid.Column="0" Text="STABLE" Style="{StaticResource KvKey}"/>
                                 <TextBlock Grid.Row="0" Grid.Column="1" x:Name="VerStable" Text="未检查" Style="{StaticResource KvVal}"/>
@@ -195,6 +192,21 @@
                                 <TextBlock Grid.Row="2" Grid.Column="1" x:Name="VerDev" Text="未检查" Style="{StaticResource KvVal}"/>
                                 <TextBlock Grid.Row="3" Grid.Column="0" Text="CANARY" Style="{StaticResource KvKey}"/>
                                 <TextBlock Grid.Row="3" Grid.Column="1" x:Name="VerCanary" Text="未检查" Style="{StaticResource KvVal}"/>
+                            </Grid>
+
+                            <!-- 分隔线 -->
+                            <Border Height="1" Background="{StaticResource ColBorder}" Margin="0,12,0,10"/>
+
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="30"/>
+                                </Grid.RowDefinitions>
+                                <TextBlock Grid.Row="0" Grid.Column="0" Text="Chrome++" Style="{StaticResource KvKey}"/>
+                                <TextBlock Grid.Row="0" Grid.Column="1" x:Name="LocalChromePlus" Text="未检测" Style="{StaticResource KvVal}"/>
                             </Grid>
                         </StackPanel>
                     </Border>
