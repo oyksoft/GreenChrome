@@ -1,0 +1,29 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <!-- .NET Framework 4.8.1：Win10 1903+ / Win11 系统自带运行时，exe 体积极小 -->
+    <TargetFramework>net481</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <LangVersion>latest</LangVersion>
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <AssemblyName>GreenChrome</AssemblyName>
+    <RootNamespace>GreenChrome</RootNamespace>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <PlatformTarget>x64</PlatformTarget>
+    <DebugType>none</DebugType>
+    <!-- 体积优化 -->
+    <Optimize>true</Optimize>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- 让 dotnet SDK 能编译 net48x 项目（无需安装 Developer Pack） -->
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" PrivateAssets="All" />
+    <!-- 纯托管 7z 解压，可编译进 exe，无需外部 7z.dll -->
+    <PackageReference Include="SharpCompress" Version="0.38.0" />
+    <!-- JSON 解析（.NET Framework 无内置通用 JSON 库），单文件打包时合并进 exe -->
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+  </ItemGroup>
+
+</Project>
