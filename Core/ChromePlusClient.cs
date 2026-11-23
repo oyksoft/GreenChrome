@@ -272,7 +272,7 @@ namespace GreenChrome.Core
                 File.Copy(dllSrc, dllDst, true);
                 log("Chrome++ version.dll 已更新：" + rel.Version);
 
-                // ini 只在缺失时补一份默认的，绝不覆盖用户已有的配置
+                // ini：用户的配置一律不动，只在缺失（新装）时才补一份默认的
                 var iniSrc = Path.Combine(extractDir, arch, "App", "chrome++.ini");
                 var iniDst = Path.Combine(appDir, "chrome++.ini");
                 if (File.Exists(iniSrc) && !File.Exists(iniDst))
