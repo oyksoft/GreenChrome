@@ -15,6 +15,9 @@
     <DebugType>none</DebugType>
     <!-- 体积优化 -->
     <Optimize>true</Optimize>
+    <!-- 单文件 exe 用不上 bindingRedirect（嵌入的 dll 不走重定向），关掉自动生成 app.config -->
+    <AutoGenerateBindingRedirects>false</AutoGenerateBindingRedirects>
+    <GenerateBindingRedirectsOutputType>false</GenerateBindingRedirectsOutputType>
   </PropertyGroup>
 
   <ItemGroup>
@@ -47,8 +50,8 @@
   </ItemGroup>
 
   <!-- 单文件 exe 不需要 app.config：supportedRuntime 与 bindingRedirect 都用不上 -->
-  <ItemGroup>
-    <None Remove="$(TargetFileName).config" />
-  </ItemGroup>
+  <Target Name="RemoveAppConfig" AfterTargets="Build">
+    <Delete Files="$(TargetDir)$(TargetFileName).config" ContinueOnError="true" />
+  </Target>
 
 </Project>
