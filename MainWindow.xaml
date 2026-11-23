@@ -415,39 +415,41 @@
                                     <RowDefinition Height="Auto"/>
                                     <RowDefinition Height="Auto"/>
                                     <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
                                 </Grid.RowDefinitions>
 
                                 <!-- 表头 -->
                                 <TextBlock Grid.Row="0" Grid.Column="1" Text="字段" Style="{StaticResource ConfHead}"/>
                                 <TextBlock Grid.Row="0" Grid.Column="2" Text="说明" Style="{StaticResource ConfHead}"/>
-                                <Border Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="3" Height="1"
-                                        VerticalAlignment="Bottom" Margin="0,0,0,8"
-                                        Background="{StaticResource ColBorder}"/>
 
-                            <Ellipse Grid.Row="1" Grid.Column="0" Width="6" Height="6"
-                                     VerticalAlignment="Top" Margin="1,8,0,0" Fill="{StaticResource ColAccent}"/>
-                            <TextBlock Grid.Row="1" Grid.Column="1" Text="chromeDir" Style="{StaticResource ConfKey}"/>
-                            <TextBlock Grid.Row="1" Grid.Column="2" Style="{StaticResource ConfDesc}"
-                                       Text="绑定的绿色版 Chrome 目录。界面上的「更换目录」「从零制作一套」也会写这里。"/>
+                                <!-- 表头分隔线：单独占一行，避免压在文字上 -->
+                                <Border Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="3" Height="1"
+                                        Background="{StaticResource ColBorder}" Margin="0,0,0,10"/>
+
                             <Ellipse Grid.Row="2" Grid.Column="0" Width="6" Height="6"
                                      VerticalAlignment="Top" Margin="1,8,0,0" Fill="{StaticResource ColAccent}"/>
-                            <TextBlock Grid.Row="2" Grid.Column="1" Text="channel" Style="{StaticResource ConfKey}"/>
+                            <TextBlock Grid.Row="2" Grid.Column="1" Text="chromeDir" Style="{StaticResource ConfKey}"/>
                             <TextBlock Grid.Row="2" Grid.Column="2" Style="{StaticResource ConfDesc}"
-                                       Text="通道：stable / beta / dev / canary。界面上的通道切换会立即写这里。"/>
+                                       Text="绑定的绿色版 Chrome 目录。界面上的「更换目录」「从零制作一套」也会写这里。"/>
                             <Ellipse Grid.Row="3" Grid.Column="0" Width="6" Height="6"
                                      VerticalAlignment="Top" Margin="1,8,0,0" Fill="{StaticResource ColAccent}"/>
-                            <TextBlock Grid.Row="3" Grid.Column="1" Text="ghMirrors" Style="{StaticResource ConfKey}"/>
+                            <TextBlock Grid.Row="3" Grid.Column="1" Text="channel" Style="{StaticResource ConfKey}"/>
                             <TextBlock Grid.Row="3" Grid.Column="2" Style="{StaticResource ConfDesc}"
-                                       Text="GitHub 国内镜像前缀列表，Chrome++ 下载时先试镜像再试官方。写 [] 则只走官方。"/>
+                                       Text="通道：stable / beta / dev / canary。界面上的通道切换会立即写这里。"/>
                             <Ellipse Grid.Row="4" Grid.Column="0" Width="6" Height="6"
-                                     VerticalAlignment="Top" Margin="1,8,0,0" Fill="{StaticResource ColTextMuted}"/>
-                            <TextBlock Grid.Row="4" Grid.Column="1" Text="proxy" Style="{StaticResource ConfKey}" Foreground="{StaticResource ColTextMuted}"/>
+                                     VerticalAlignment="Top" Margin="1,8,0,0" Fill="{StaticResource ColAccent}"/>
+                            <TextBlock Grid.Row="4" Grid.Column="1" Text="ghMirrors" Style="{StaticResource ConfKey}"/>
                             <TextBlock Grid.Row="4" Grid.Column="2" Style="{StaticResource ConfDesc}"
-                                       Text="预留字段，当前版本未使用（下载走镜像与直连，不需要代理）。"/>
+                                       Text="GitHub 国内镜像前缀列表，Chrome++ 下载时先试镜像再试官方。写 [] 则只走官方。"/>
                             <Ellipse Grid.Row="5" Grid.Column="0" Width="6" Height="6"
                                      VerticalAlignment="Top" Margin="1,8,0,0" Fill="{StaticResource ColTextMuted}"/>
-                            <TextBlock Grid.Row="5" Grid.Column="1" Text="autoCheck" Style="{StaticResource ConfKey}" Foreground="{StaticResource ColTextMuted}"/>
+                            <TextBlock Grid.Row="5" Grid.Column="1" Text="proxy" Style="{StaticResource ConfKey}" Foreground="{StaticResource ColTextMuted}"/>
                             <TextBlock Grid.Row="5" Grid.Column="2" Style="{StaticResource ConfDesc}"
+                                       Text="预留字段，当前版本未使用（下载走镜像与直连，不需要代理）。"/>
+                            <Ellipse Grid.Row="6" Grid.Column="0" Width="6" Height="6"
+                                     VerticalAlignment="Top" Margin="1,8,0,0" Fill="{StaticResource ColTextMuted}"/>
+                            <TextBlock Grid.Row="6" Grid.Column="1" Text="autoCheck" Style="{StaticResource ConfKey}" Foreground="{StaticResource ColTextMuted}"/>
+                            <TextBlock Grid.Row="6" Grid.Column="2" Style="{StaticResource ConfDesc}"
                                        Text="预留字段，当前版本未使用（启动不自动联网，只有点「检查更新」才请求）。"/>
                             </Grid>
                         </Border>
@@ -457,7 +459,7 @@
             </ScrollViewer>
 
             <!-- 运行日志 -->
-            <Border Grid.Row="1" x:Name="LogCard" Style="{StaticResource Card}" Margin="28,0,28,24">
+            <Border Grid.Row="2" x:Name="LogCard" Style="{StaticResource Card}" Margin="28,0,28,24">
                 <Grid>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
@@ -481,7 +483,7 @@
                                 Click="BtnClearLog_Click"/>
                     </Grid>
 
-                    <ListBox Grid.Row="1" x:Name="LogList" BorderThickness="0" Background="Transparent"
+                    <ListBox Grid.Row="2" x:Name="LogList" BorderThickness="0" Background="Transparent"
                              ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                              ScrollViewer.VerticalScrollBarVisibility="Auto"
                              VirtualizingPanel.VirtualizationMode="Recycling">
