@@ -374,16 +374,13 @@
                                 <RowDefinition Height="30"/>
                                 <RowDefinition Height="30"/>
                                 <RowDefinition Height="30"/>
-                                <RowDefinition Height="30"/>
                             </Grid.RowDefinitions>
                             <TextBlock Grid.Row="0" Grid.Column="0" Text="作者" Style="{StaticResource KvKey}"/>
-                            <TextBlock Grid.Row="0" Grid.Column="1" Text="OYK（待补）" Style="{StaticResource KvVal}"/>
-                            <TextBlock Grid.Row="1" Grid.Column="0" Text="源码" Style="{StaticResource KvKey}"/>
-                            <TextBlock Grid.Row="1" Grid.Column="1" Text="https://github.com/（待补）" Style="{StaticResource KvVal}"/>
-                            <TextBlock Grid.Row="2" Grid.Column="0" Text="版本" Style="{StaticResource KvKey}"/>
-                            <TextBlock Grid.Row="2" Grid.Column="1" Text="v0.1.0（WPF 版）" Style="{StaticResource KvVal}"/>
-                            <TextBlock Grid.Row="3" Grid.Column="0" Text="许可" Style="{StaticResource KvKey}"/>
-                            <TextBlock Grid.Row="3" Grid.Column="1" Text="MIT" Style="{StaticResource KvVal}"/>
+                            <TextBlock Grid.Row="0" Grid.Column="1" Text="快乐无极" Style="{StaticResource KvVal}"/>
+                            <TextBlock Grid.Row="1" Grid.Column="0" Text="版本" Style="{StaticResource KvKey}"/>
+                            <TextBlock Grid.Row="1" Grid.Column="1" Text="v0.1.0（WPF 版）" Style="{StaticResource KvVal}"/>
+                            <TextBlock Grid.Row="2" Grid.Column="0" Text="许可" Style="{StaticResource KvKey}"/>
+                            <TextBlock Grid.Row="2" Grid.Column="1" Text="MIT" Style="{StaticResource KvVal}"/>
                         </Grid>
 
                         <!-- 配置文件 -->
