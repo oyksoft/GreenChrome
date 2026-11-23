@@ -68,7 +68,7 @@
                     </RadioButton>
                 </StackPanel>
 
-                <TextBlock Grid.Row="2" Text="v0.1.0 · WPF" FontSize="12.5" Margin="4,0,0,0"
+                <TextBlock Grid.Row="2" Text="v0.1.0  by 快乐无极" FontSize="12.5" Margin="4,0,0,0"
                            Foreground="{StaticResource ColTextMuted}"/>
             </Grid>
         </Border>
@@ -377,7 +377,7 @@
                             <TextBlock Grid.Row="0" Grid.Column="0" Text="作者" Style="{StaticResource KvKey}"/>
                             <TextBlock Grid.Row="0" Grid.Column="1" Text="快乐无极" Style="{StaticResource KvVal}"/>
                             <TextBlock Grid.Row="1" Grid.Column="0" Text="版本" Style="{StaticResource KvKey}"/>
-                            <TextBlock Grid.Row="1" Grid.Column="1" Text="v0.1.0（WPF 版）" Style="{StaticResource KvVal}"/>
+                            <TextBlock Grid.Row="1" Grid.Column="1" Text="v0.1.0" Style="{StaticResource KvVal}"/>
                         </Grid>
 
                         <!-- 配置文件 -->
