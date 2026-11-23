@@ -92,8 +92,8 @@ namespace GreenChrome.Core
 
         /// <summary>
         /// 读取配置。文件不存在时返回默认值（首次使用，不报错）。
-        /// 文件损坏时把坏文件备份为 greenchrome.conf.bad 并返回默认值，
-        /// 不打断启动（警告文案通过 warning 返回，由界面写日志）。
+        /// 文件损坏时直接用默认配置启动（不保留坏文件），
+        /// 警告文案通过 warning 返回，由界面写日志。
         /// </summary>
         public static AppConfig Load()
         {
@@ -116,18 +116,7 @@ namespace GreenChrome.Core
             }
             catch (Exception ex)
             {
-                // 坏文件留档，避免用户下次启动反复报错
-                var bad = path + ".bad";
-                try
-                {
-                    if (File.Exists(bad)) File.Delete(bad);
-                    File.Move(path, bad);
-                    warning = "配置文件格式有误，已备份为 " + Path.GetFileName(bad) + "，本次按默认配置启动（" + ex.Message + "）";
-                }
-                catch
-                {
-                    warning = "配置文件格式有误，本次按默认配置启动（" + ex.Message + "）";
-                }
+                warning = "配置文件格式有误，本次按默认配置启动（" + ex.Message + "）";
                 return new AppConfig();
             }
 

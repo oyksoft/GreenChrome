@@ -110,9 +110,8 @@ namespace GreenChrome.Core
                 var targetDir = Path.Combine(appDir, actualVersion);
                 if (Directory.Exists(targetDir))
                 {
-                    var old = targetDir + ".old_" + DateTime.Now.ToString("HHmmss");
-                    p.Log("目标版本目录已存在，先重命名备份：" + Path.GetFileName(old));
-                    Directory.Move(targetDir, old);
+                    p.Log("目标版本目录已存在，删除后重写：" + Path.GetFileName(targetDir));
+                    Directory.Delete(targetDir, true);
                 }
                 Directory.CreateDirectory(appDir);
                 CopyDirectory(layout.VersionDir, targetDir);
@@ -139,7 +138,7 @@ namespace GreenChrome.Core
                 {
                     var name = Path.GetFileName(dir);
                     if (name == actualVersion) continue;
-                    // 只清理形如 160.0.8171.0 的版本目录（保留 .old_ 备份不动）
+                    // 只清理形如 160.0.8171.0 的版本目录
                     if (name.Count(c => c == '.') < 2) continue;
                     try
                     {

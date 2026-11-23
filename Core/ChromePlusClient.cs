@@ -191,7 +191,8 @@ namespace GreenChrome.Core
         }
 
         /// <summary>
-        /// 更新 Chrome++：下载 7z → 校验 → 解包取 &lt;架构&gt;/App/version.dll → 替换（先备份）。
+        /// 更新 Chrome++：下载 7z → 校验 → 解包取 &lt;架构&gt;/App/version.dll → 直接替换（不留备份）。
+        /// chrome++.ini 不动（用户配置）。
         /// arch 取 x64 / x86 / arm64。
         /// </summary>
         public static string Update(string greenChromeDir, string arch, ChromePlusRelease rel,
@@ -261,16 +262,23 @@ namespace GreenChrome.Core
                 Directory.CreateDirectory(appDir);
                 var dllDst = Path.Combine(appDir, "version.dll");
 
-                // 已有才备份；新建时本来就没有 version.dll，不算错误
-                string bak = null;
-                if (File.Exists(dllDst))
+                // 直接替换，不留备份文件。
+                // 步骤：先写临时文件 → 删旧文件 → 移动到位，中途失败不会留下半个文件。
+                var tmpDst = dllDst + ".new";
+                try
                 {
-                    bak = dllDst + ".bak";
-                    File.Copy(dllDst, bak, true);
+                    File.Copy(dllSrc, tmpDst, true);
+                    if (File.Exists(dllDst)) File.Delete(dllDst);
+                    File.Move(tmpDst, dllDst);
                 }
-
-                File.Copy(dllSrc, dllDst, true);
+                finally
+                {
+                    try { if (File.Exists(tmpDst)) File.Delete(tmpDst); } catch { }
+                }
                 log("Chrome++ version.dll 已更新：" + rel.Version);
+
+                // 清理历史遗留的备份文件（早期版本会生成 version.dll.bak）
+                CleanUpBakFiles(appDir, log);
 
                 // ini：用户的配置一律不动，只在缺失（新装）时才补一份默认的
                 var iniSrc = Path.Combine(extractDir, arch, "App", "chrome++.ini");
@@ -281,12 +289,33 @@ namespace GreenChrome.Core
                     log("已安装默认 chrome++.ini");
                 }
 
-                return bak;
+                return rel.Version;
             }
             finally
             {
                 try { Directory.Delete(tempDir, true); } catch { }
             }
+        }
+
+        /// <summary>
+        /// 删除 App 目录下遗留的备份文件（version.dll.bak 等）。
+        /// 只扫 App 目录，不碰 Data 里 Chrome 自己产生的 .bak。
+        /// </summary>
+        private static void CleanUpBakFiles(string appDir, Action<string> log)
+        {
+            try
+            {
+                foreach (var f in Directory.GetFiles(appDir, "*.bak"))
+                {
+                    try
+                    {
+                        File.Delete(f);
+                        if (log != null) log("已清理旧备份 " + Path.GetFileName(f));
+                    }
+                    catch { }
+                }
+            }
+            catch { }
         }
 
         /// <summary>取地址的主机名，用于日志里简短显示。</summary>

@@ -715,7 +715,7 @@ namespace GreenChrome
                 RefreshLocalInfo();
                 UpdateChromePlusLabel();
                 MessageDialog.Show(this, DialogKind.Info, "Chrome++ 已更新",
-                    "Chrome++ 已更新到 " + _cppRelease.Version + "。\n\n若有旧文件，已备份为 App\version.dll.bak。");
+                    "Chrome++ 已更新到 " + _cppRelease.Version + "。\n\n你的 chrome++.ini 配置保持不变。");
             }
             catch (Exception ex)
             {
