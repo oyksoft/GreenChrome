@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
@@ -218,6 +219,13 @@ namespace GreenChrome
                 ? (relPreview.size / 1048576.0).ToString("F0") + " MB"
                 : "未知";
             var verText = (relPreview != null && relPreview.IsUsable) ? relPreview.version : "未知";
+
+            // 目标目录里若已有 Chrome 在跑，先处理掉
+            if (!EnsureChromeClosed(path))
+            {
+                AddLog("目标目录里有 Chrome 正在运行，已取消制作");
+                return;
+            }
 
             if (!MessageDialog.Confirm(this, DialogKind.Info, "从零制作一套",
                 "将在下面这个目录里制作一套全新的绿色版 Chrome：\n\n" + path +
@@ -633,6 +641,13 @@ namespace GreenChrome
                 return;
             }
 
+            // 替换 version.dll 时 Chrome 也在占用它
+            if (!EnsureChromeClosed(_cfg.ChromeDir))
+            {
+                AddLog("Chrome 正在运行，已取消 Chrome++ 更新");
+                return;
+            }
+
             SetBusy(true);
             try
             {
@@ -694,6 +709,130 @@ namespace GreenChrome
 
         private CancellationTokenSource _cancel;
 
+        /// <summary>一组正在运行的、属于某套绿色版的进程（按可执行文件路径归组）。</summary>
+        private class RunningProc
+        {
+            public string Path;                 // 可执行文件路径
+            public List<int> Pids = new List<int>();
+
+            public int Count { get { return Pids.Count; } }
+        }
+
+        /// <summary>
+        /// 找出正在运行的、属于该绿色版目录的 Chrome 进程。
+        /// 绿色版的 chrome.exe / chrome_proxy.exe 可能位于 App\ 或 App\&lt;版本&gt;\ 下，
+        /// 只要 exe 所在目录在这套绿色版之内就算。
+        /// </summary>
+        private static List<RunningProc> RunningChromeIn(string greenDir)
+        {
+            var found = new List<RunningProc>();
+            if (string.IsNullOrWhiteSpace(greenDir)) return found;
+
+            string root;
+            try
+            {
+                root = Path.GetFullPath(greenDir).TrimEnd('\\', '/');
+            }
+            catch
+            {
+                return found;
+            }
+
+            foreach (var name in new[] { "chrome", "chrome_proxy" })
+            {
+                Process[] procs;
+                try { procs = Process.GetProcessesByName(name); }
+                catch { continue; }
+
+                foreach (var p in procs)
+                {
+                    using (p)
+                    {
+                        try
+                        {
+                            var file = p.MainModule.FileName;
+                            if (string.IsNullOrEmpty(file)) continue;
+                            var dir = Path.GetDirectoryName(file);
+                            if (string.IsNullOrEmpty(dir)) continue;
+                            dir = Path.GetFullPath(dir).TrimEnd('\\', '/');
+                            if (!dir.StartsWith(root, StringComparison.OrdinalIgnoreCase)) continue;
+                            if (dir.Length > root.Length && root.Length > 0 &&
+                                dir[root.Length] != '\\' && dir[root.Length] != '/') continue;
+
+                            // 同一个 exe 会有很多子进程，按路径归组
+                            var group = found.Find(g => string.Equals(g.Path, file, StringComparison.OrdinalIgnoreCase));
+                            if (group == null)
+                            {
+                                group = new RunningProc { Path = file };
+                                found.Add(group);
+                            }
+                            group.Pids.Add(p.Id);
+                        }
+                        catch
+                        {
+                            // 拿不到别的用户的进程路径就跳过
+                        }
+                    }
+                }
+            }
+            return found;
+        }
+
+        /// <summary>
+        /// 更新前确认这套绿色版的 Chrome 没有在运行。
+        /// 返回 true 表示可以继续；返回 false 表示用户取消，流程应终止。
+        /// </summary>
+        private bool EnsureChromeClosed(string greenDir)
+        {
+            var groups = RunningChromeIn(greenDir);
+            if (groups.Count == 0)
+                return true;
+
+            var total = groups.Sum(g => g.Count);
+            var shown = groups.Select(g => "  · " + g.Path +
+                (g.Count > 1 ? "   （" + g.Count + " 个进程）" : ""));
+            var NL = "\n";
+
+            var message =
+                "检测到 " + total + " 个属于这套绿色版的 Chrome 进程正在运行：" + NL + NL +
+                string.Join(NL, shown) + NL + NL +
+                "更新需要替换 Chrome 程序文件，运行中会被占用导致失败。" + NL +
+                "· 点「结束并继续」强制结束这些进程（未保存的内容会丢失）" + NL +
+                "· 点「取消」请自己关闭 Chrome 后再回来更新";
+
+            var ok = MessageDialog.Confirm(this, DialogKind.Warn, "Chrome 正在运行", message,
+                "结束并继续", "取消");
+
+            if (!ok)
+                return false;
+
+            foreach (var g in groups)
+            {
+                foreach (var pid in g.Pids)
+                {
+                    try
+                    {
+                        var p = Process.GetProcessById(pid);
+                        p.Kill();
+                        p.WaitForExit(5000);
+                    }
+                    catch (Exception ex)
+                    {
+                        AddLog("结束进程 " + pid + " 失败：" + ex.Message);
+                        MessageDialog.Show(this, DialogKind.Error, "无法结束 Chrome",
+                            "进程 " + pid + " 没能结束：" + NL + NL + ex.Message +
+                            NL + NL + "请手动关闭 Chrome 后重试。");
+                        return false;
+                    }
+                }
+                AddLog("已结束 " + g.Count + " 个 Chrome 进程：" + g.Path);
+            }
+
+            // 给系统一点时间释放文件句柄
+            System.Threading.Thread.Sleep(600);
+            return true;
+        }
+
         private async void BtnUpgrade_Click(object sender, RoutedEventArgs e)
         {
             if (string.IsNullOrEmpty(_cfg.ChromeDir))
@@ -711,6 +850,14 @@ namespace GreenChrome
             if (rel == null || !rel.IsUsable)
             {
                 MessageDialog.Show(this, DialogKind.Warn, "无可用版本", "所选通道没有可用的版本信息。");
+                return;
+            }
+
+            // Chrome 在运行会锁住程序文件，必须先关掉
+            if (!EnsureChromeClosed(_cfg.ChromeDir))
+            {
+                AddLog("Chrome 正在运行，已取消更新");
+                SetStatus("状态：Chrome 正在运行", "ColDanger");
                 return;
             }
 
