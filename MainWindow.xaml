@@ -200,7 +200,8 @@
                     <!-- ② 线上最新版本 -->
                     <Border Grid.Column="2" Style="{StaticResource Card}">
                         <StackPanel>
-                            <TextBlock Text="线上最新版本 · COI.OYK.PUB" Style="{StaticResource CardTitle}"/>
+                            <!-- 内联内容写成一行：WPF 会把换行缩进当空白，会多出空格 -->
+                            <TextBlock Style="{StaticResource CardTitle}"><Run Text="线上最新版本 · "/><Hyperlink x:Name="ApiLink" RequestNavigate="Hyperlink_RequestNavigate" ToolTip="打开版本来源"><Run Text="COI.OYK.PUB" Foreground="{StaticResource ColAccent}"/></Hyperlink></TextBlock>
                             <Grid>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="Auto"/>
@@ -344,7 +345,7 @@
                             <TextBlock FontSize="13.5" Foreground="{StaticResource ColText}" Margin="0,0,0,4" Text="· 自动检测本机绿色版版本，与线上最新版本对比；"/>
                             <TextBlock FontSize="13.5" Foreground="{StaticResource ColText}" Margin="0,0,0,4" Text="· 需要时下载、校验、解包，升级到新版本；"/>
                             <TextBlock FontSize="13.5" Foreground="{StaticResource ColText}" Margin="0,0,0,4" Text="· 所有文件同在一个目录，不写注册表、不安装、可整体移动。"/>
-                            <TextBlock FontSize="13.5" Foreground="{StaticResource ColTextMuted}" Margin="0,6,0,0" Text="版本来源：https://coi.oyk.pub/api"/>
+                            <TextBlock FontSize="13.5" Foreground="{StaticResource ColTextMuted}" Margin="0,6,0,0"><Run Text="版本来源："/><Hyperlink x:Name="ApiLinkAbout" RequestNavigate="Hyperlink_RequestNavigate"><Run Text="https://coi.oyk.pub/api" Foreground="{StaticResource ColAccent}"/></Hyperlink></TextBlock>
                         </StackPanel>
                         <Grid>
                             <Grid.ColumnDefinitions>

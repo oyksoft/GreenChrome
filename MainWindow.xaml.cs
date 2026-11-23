@@ -125,8 +125,55 @@ namespace GreenChrome
             PageDashboard.Visibility = (bound && !showAbout) ? Visibility.Visible : Visibility.Collapsed;
             PageAbout.Visibility = showAbout ? Visibility.Visible : Visibility.Collapsed;
 
+            UpdateApiLink();
+
             if (bound)
                 RefreshLocalInfo();
+        }
+
+        /// <summary>
+        /// 把超链接指向配置里实际的版本来源（不写死域名）。
+        /// </summary>
+        private void UpdateApiLink()
+        {
+            var api = string.IsNullOrWhiteSpace(_cfg.Api) ? AppConfig.DefaultApi : _cfg.Api;
+            Uri site;
+            try
+            {
+                // 从 https://coi.oyk.pub/api 取到 https://coi.oyk.pub
+                site = new Uri(new Uri(api).GetLeftPart(UriPartial.Authority));
+            }
+            catch
+            {
+                site = new Uri("https://coi.oyk.pub");
+            }
+
+            if (ApiLink != null)
+            {
+                ApiLink.NavigateUri = site;
+                ApiLink.ToolTip = "打开 " + site + "\\n版本来源：" + api;
+            }
+            if (ApiLinkAbout != null)
+            {
+                Uri full;
+                try { full = new Uri(api); } catch { full = site; }
+                ApiLinkAbout.NavigateUri = full;
+                ApiLinkAbout.ToolTip = "打开 " + full;
+            }
+        }
+
+        /// <summary>用系统默认浏览器打开超链接。</summary>
+        private void Hyperlink_RequestNavigate(object sender, System.Windows.Navigation.RequestNavigateEventArgs e)
+        {
+            try
+            {
+                Process.Start(new ProcessStartInfo(e.Uri.AbsoluteUri) { UseShellExecute = true });
+                e.Handled = true;
+            }
+            catch (Exception ex)
+            {
+                AddLog("打开链接失败：" + ex.Message);
+            }
         }
 
         private void RefreshLocalInfo()
