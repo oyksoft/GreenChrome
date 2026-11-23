@@ -28,6 +28,11 @@
   <ItemGroup>
     <!-- 系统原生「选择文件夹」对话框（Vista IFileDialog，自带新建文件夹） -->
     <Reference Include="System.Windows.Forms" />
+    <!-- Costura 的启动初始化接口（仅编译期引用，不复制到输出目录） -->
+    <Reference Include="Costura">
+      <HintPath>$(NuGetPackageRoot)costura.fody\6.2.0\lib\netstandard2.0\Costura.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
   </ItemGroup>
 
   <ItemGroup>
@@ -35,8 +40,15 @@
     <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" PrivateAssets="All" />
     <!-- 纯托管 7z 解压，可编译进 exe，无需外部 7z.dll -->
     <PackageReference Include="SharpCompress" Version="0.38.0" />
-    <!-- JSON 解析（.NET Framework 无内置通用 JSON 库），单文件打包时合并进 exe -->
+    <!-- JSON 解析（.NET Framework 无内置通用 JSON 库） -->
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+    <!-- 把依赖 dll 嵌入 exe，打包成单文件（构建后自动生效） -->
+    <PackageReference Include="Costura.Fody" Version="6.2.0" PrivateAssets="all" />
+  </ItemGroup>
+
+  <!-- 单文件 exe 不需要 app.config：supportedRuntime 与 bindingRedirect 都用不上 -->
+  <ItemGroup>
+    <None Remove="$(TargetFileName).config" />
   </ItemGroup>
 
 </Project>

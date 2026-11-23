@@ -28,3 +28,6 @@ cpp.7z
 # 验证用探针程序
 tools/probe/bin/
 tools/probe/obj/
+
+# 自检日志
+selftest.log
