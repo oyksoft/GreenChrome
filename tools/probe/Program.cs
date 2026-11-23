@@ -2,56 +2,84 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using GreenChrome.Core;
+using System.Linq;
 
-class Program
+namespace GreenChrome.Tools
 {
-    static void Main()
+    /// <summary>
+    /// 诊断工具：列出正在运行的、属于指定绿色版目录的 Chrome 进程。
+    /// 用来排查「更新时提示 Chrome 正在运行」的问题。
+    ///
+    /// 用法：probe.exe &lt;绿色版目录&gt;
+    /// </summary>
+    class Program
     {
-        Console.OutputEncoding = System.Text.Encoding.UTF8;
-        var fakeDir = @"D:\tmp_gc\fake";
-        var realDir = @"D:\GreenSoft\MyChrome";
-
-        Console.WriteLine("== 启动假 chrome 进程 ==");
-        var proc = Process.Start(new ProcessStartInfo(Path.Combine(fakeDir, "App", "chrome.exe")) { UseShellExecute = true });
-        System.Threading.Thread.Sleep(2500);
-
-        foreach (var target in new[] { fakeDir, realDir, @"D:\tmp_gc" })
+        static int Main(string[] args)
         {
-            var found = Detect(target);
-            Console.WriteLine(string.Format("  目录 {0,-32} 命中 {1} 个", target, found.Count));
-            foreach (var f in found) Console.WriteLine("      " + f);
+            Console.OutputEncoding = System.Text.Encoding.UTF8;
+
+            var dir = args.Length > 0 ? args[0] : @"D:\GreenSoft\MyChrome";
+            var groups = RunningChromeIn(dir);
+
+            Console.WriteLine("目录: " + dir);
+            if (groups.Count == 0)
+            {
+                Console.WriteLine("没有正在运行的 Chrome 进程属于该目录。");
+                return 0;
+            }
+
+            foreach (var g in groups)
+                Console.WriteLine(string.Format("  {0}   （{1} 个进程）", g.Path, g.Count));
+
+            Console.WriteLine("合计 " + groups.Sum(g => g.Count) + " 个进程。");
+            return 0;
         }
 
-        try { proc.Kill(); } catch { }
-        Console.WriteLine("已结束假进程");
-    }
-
-    static List<string> Detect(string greenDir)
-    {
-        var found = new List<string>();
-        string root = Path.GetFullPath(greenDir).TrimEnd('\\', '/');
-        foreach (var name in new[] { "chrome", "chrome_proxy" })
+        private class RunningProc
         {
-            foreach (var p in Process.GetProcessesByName(name))
+            public string Path;
+            public List<int> Pids = new List<int>();
+            public int Count { get { return Pids.Count; } }
+        }
+
+        private static List<RunningProc> RunningChromeIn(string greenDir)
+        {
+            var found = new List<RunningProc>();
+            if (string.IsNullOrWhiteSpace(greenDir)) return found;
+
+            string root;
+            try { root = Path.GetFullPath(greenDir).TrimEnd('\\', '/'); }
+            catch { return found; }
+
+            foreach (var name in new[] { "chrome", "chrome_proxy" })
             {
-                using (p)
+                Process[] procs;
+                try { procs = Process.GetProcessesByName(name); } catch { continue; }
+
+                foreach (var p in procs)
                 {
-                    try
+                    using (p)
                     {
-                        var file = p.MainModule.FileName;
-                        var dir = Path.GetDirectoryName(file);
-                        if (string.IsNullOrEmpty(dir)) continue;
-                        dir = Path.GetFullPath(dir).TrimEnd('\\', '/');
-                        if (!dir.StartsWith(root, StringComparison.OrdinalIgnoreCase)) continue;
-                        if (dir.Length > root.Length && root.Length > 0 &&
-                            dir[root.Length] != '\\' && dir[root.Length] != '/') continue;
-                        found.Add(file);
+                        try
+                        {
+                            var file = p.MainModule.FileName;
+                            if (string.IsNullOrEmpty(file)) continue;
+                            var d = Path.GetDirectoryName(file);
+                            if (string.IsNullOrEmpty(d)) continue;
+                            d = Path.GetFullPath(d).TrimEnd('\\', '/');
+                            if (!d.StartsWith(root, StringComparison.OrdinalIgnoreCase)) continue;
+                            if (d.Length > root.Length && root.Length > 0 &&
+                                d[root.Length] != '\\' && d[root.Length] != '/') continue;
+
+                            var g = found.Find(x => string.Equals(x.Path, file, StringComparison.OrdinalIgnoreCase));
+                            if (g == null) { g = new RunningProc { Path = file }; found.Add(g); }
+                            g.Pids.Add(p.Id);
+                        }
+                        catch { /* 无权读取路径的进程跳过 */ }
                     }
-                    catch { }
                 }
             }
+            return found;
         }
-        return found;
     }
 }

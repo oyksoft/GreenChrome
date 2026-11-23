@@ -221,7 +221,7 @@ namespace GreenChrome
             var verText = (relPreview != null && relPreview.IsUsable) ? relPreview.version : "未知";
 
             // 目标目录里若已有 Chrome 在跑，先处理掉
-            if (!EnsureChromeClosed(path))
+            if (!await EnsureChromeClosedAsync(path))
             {
                 AddLog("目标目录里有 Chrome 正在运行，已取消制作");
                 return;
@@ -642,7 +642,7 @@ namespace GreenChrome
             }
 
             // 替换 version.dll 时 Chrome 也在占用它
-            if (!EnsureChromeClosed(_cfg.ChromeDir))
+            if (!await EnsureChromeClosedAsync(_cfg.ChromeDir))
             {
                 AddLog("Chrome 正在运行，已取消 Chrome++ 更新");
                 return;
@@ -782,7 +782,14 @@ namespace GreenChrome
         /// 更新前确认这套绿色版的 Chrome 没有在运行。
         /// 返回 true 表示可以继续；返回 false 表示用户取消，流程应终止。
         /// </summary>
-        private bool EnsureChromeClosed(string greenDir)
+        /// <summary>
+        /// 更新前确认这套绿色版的 Chrome 没有在运行。
+        /// 返回 true 表示可以继续；返回 false 表示用户取消或关不掉，流程应终止。
+        ///
+        /// 结束进程后不会立即返回：Chrome 的子进程被杀后主进程可能还在，
+        /// 甚至会崩溃重启，所以要反复检测 + 重试，直到干净为止。
+        /// </summary>
+        private async Task<bool> EnsureChromeClosedAsync(string greenDir)
         {
             var groups = RunningChromeIn(greenDir);
             if (groups.Count == 0)
@@ -806,31 +813,80 @@ namespace GreenChrome
             if (!ok)
                 return false;
 
-            foreach (var g in groups)
+            // 最多试 5 轮：杀进程 → 轮询等待 → 还在就再杀
+            for (int round = 1; round <= 5; round++)
             {
-                foreach (var pid in g.Pids)
+                var alive = RunningChromeIn(greenDir);
+                if (alive.Count == 0)
                 {
-                    try
+                    AddLog("Chrome 已全部关闭");
+                    return true;
+                }
+
+                SetStatus("状态：正在关闭 Chrome（第 " + round + "/5 轮）…", "ColAccent");
+
+                // 先给一次温和的机会：发关闭消息，让 Chrome 自己退
+                foreach (var g in alive)
+                {
+                    foreach (var pid in g.Pids)
                     {
-                        var p = Process.GetProcessById(pid);
-                        p.Kill();
-                        p.WaitForExit(5000);
-                    }
-                    catch (Exception ex)
-                    {
-                        AddLog("结束进程 " + pid + " 失败：" + ex.Message);
-                        MessageDialog.Show(this, DialogKind.Error, "无法结束 Chrome",
-                            "进程 " + pid + " 没能结束：" + NL + NL + ex.Message +
-                            NL + NL + "请手动关闭 Chrome 后重试。");
-                        return false;
+                        try
+                        {
+                            var p = Process.GetProcessById(pid);
+                            if (!p.CloseMainWindow())
+                                p.Kill();
+                        }
+                        catch { }
                     }
                 }
-                AddLog("已结束 " + g.Count + " 个 Chrome 进程：" + g.Path);
+
+                // 温和关闭给 3 秒
+                for (int i = 0; i < 6 && RunningChromeIn(greenDir).Count > 0; i++)
+                    await Task.Delay(500);
+
+                // 还活着就强杀
+                var still = RunningChromeIn(greenDir);
+                if (still.Count > 0)
+                {
+                    foreach (var g in still)
+                    {
+                        foreach (var pid in g.Pids)
+                        {
+                            try
+                            {
+                                var p = Process.GetProcessById(pid);
+                                p.Kill();
+                                p.WaitForExit(3000);
+                            }
+                            catch { }
+                        }
+                    }
+                    AddLog("已强制结束 " + still.Sum(g => g.Count) + " 个 Chrome 进程");
+                }
+
+                // 强杀后轮询等待，最多 10 秒，确认真的退干净了
+                for (int i = 0; i < 20; i++)
+                {
+                    await Task.Delay(500);
+                    if (RunningChromeIn(greenDir).Count == 0)
+                    {
+                        AddLog("Chrome 已全部关闭");
+                        SetStatus("状态：Chrome 已关闭", "ColAccent");
+                        return true;
+                    }
+                }
             }
 
-            // 给系统一点时间释放文件句柄
-            System.Threading.Thread.Sleep(600);
-            return true;
+            var left = RunningChromeIn(greenDir);
+            var leftCount = left.Sum(g => g.Count);
+            AddLog("Chrome 未能完全关闭，剩余 " + leftCount + " 个进程");
+            SetStatus("状态：Chrome 未能关闭", "ColDanger");
+            MessageDialog.Show(this, DialogKind.Error, "Chrome 没能关闭",
+                "结束进程后等了 30 多秒，仍然检测到 Chrome 在运行：" + NL + NL +
+                string.Join(NL, left.Select(g => "  · " + g.Path)) + NL + NL +
+                "可能是浏览器崩溃后自动重启了。" + NL +
+                "请手动完全退出 Chrome（必要时在任务管理器里结束）后再重试。");
+            return false;
         }
 
         private async void BtnUpgrade_Click(object sender, RoutedEventArgs e)
@@ -854,7 +910,7 @@ namespace GreenChrome
             }
 
             // Chrome 在运行会锁住程序文件，必须先关掉
-            if (!EnsureChromeClosed(_cfg.ChromeDir))
+            if (!await EnsureChromeClosedAsync(_cfg.ChromeDir))
             {
                 AddLog("Chrome 正在运行，已取消更新");
                 SetStatus("状态：Chrome 正在运行", "ColDanger");
