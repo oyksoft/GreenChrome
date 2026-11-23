@@ -35,15 +35,15 @@ namespace GreenChrome.Core
         /// <summary>
         /// 查询最新 Chrome++ 版本。失败返回 null（不抛异常）。
         /// </summary>
-        public static ChromePlusRelease FetchLatest()
+        public static ChromePlusRelease FetchLatest(Action<string> log = null)
         {
             for (int attempt = 0; attempt < 2; attempt++)
             {
                 try
                 {
                     var req = (HttpWebRequest)WebRequest.Create(RepoApi);
-                    req.Timeout = 5000;
-                    req.ReadWriteTimeout = 5000;
+                    req.Timeout = 8000;
+                    req.ReadWriteTimeout = 8000;
                     req.UserAgent = "GreenChrome/0.1";
                     req.Accept = "application/vnd.github+json";
 
@@ -93,9 +93,27 @@ namespace GreenChrome.Core
                         return rel;
                     }
                 }
-                catch (Exception)
+                catch (WebException wex)
                 {
+                    // GitHub 未认证时限流：未认证 60 次/小时/IP，国内共享出口 IP 很容易触发
+                    var resp = wex.Response as HttpWebResponse;
+                    if (resp != null && resp.StatusCode == HttpStatusCode.Forbidden)
+                    {
+                        var remain = resp.Headers["X-RateLimit-Remaining"];
+                        if (log != null)
+                            log("GitHub 接口被限流（剩余配额 " + remain + "），稍后再试");
+                    }
+                    else if (log != null)
+                    {
+                        log("GitHub 接口请求失败：" + wex.Message);
+                    }
                     if (attempt == 1) return null;   // 重试一次仍失败 → 静默降级
+                    Thread.Sleep(600);
+                }
+                catch (Exception ex)
+                {
+                    if (log != null) log("GitHub 接口异常：" + ex.Message);
+                    if (attempt == 1) return null;
                     Thread.Sleep(500);
                 }
             }
@@ -107,7 +125,8 @@ namespace GreenChrome.Core
         /// arch 取 x64 / x86 / arm64。
         /// </summary>
         public static string Update(string greenChromeDir, string arch, ChromePlusRelease rel,
-                                    Action<string> log)
+                                    Action<string> log, Action<long, long> onProgress = null,
+                                    CancellationToken cancel = default(CancellationToken))
         {
             if (rel == null || string.IsNullOrEmpty(rel.PackageUrl))
                 throw new InvalidOperationException("没有可用的 Chrome++ 下载地址");
@@ -120,7 +139,7 @@ namespace GreenChrome.Core
                 var pkgPath = Path.Combine(tempDir, "chrome_plus.7z");
                 log("正在下载 Chrome++ " + rel.Version + "（" + (rel.Size / 1024) + " KB）");
 
-                DownloadFile(rel.PackageUrl, pkgPath);
+                DownloadFile(rel.PackageUrl, pkgPath, log, onProgress, cancel);
 
                 if (!string.IsNullOrEmpty(rel.Sha256))
                 {
@@ -128,6 +147,10 @@ namespace GreenChrome.Core
                     if (!string.Equals(actual, rel.Sha256, StringComparison.OrdinalIgnoreCase))
                         throw new InvalidDataException("Chrome++ 包 SHA256 校验失败");
                     log("Chrome++ 包校验通过");
+                }
+                else
+                {
+                    log("未取到官方 SHA256，仅校验文件大小");
                 }
 
                 var extractDir = Path.Combine(tempDir, "x");
@@ -171,19 +194,60 @@ namespace GreenChrome.Core
             }
         }
 
-        private static void DownloadFile(string url, string destPath)
+        /// <summary>
+        /// 下载文件。GitHub 的 release 下载会 302 跳到 release-assets.githubusercontent.com，
+        /// 国内网络下这个跳转容易超时，所以加重试。
+        /// </summary>
+        private static void DownloadFile(string url, string destPath, Action<string> log,
+                                         Action<long, long> onProgress, CancellationToken cancel)
         {
-            var req = (HttpWebRequest)WebRequest.Create(url);
-            req.Timeout = 15000;
-            req.ReadWriteTimeout = 15000;
-            req.UserAgent = "GreenChrome/0.1";
-            req.AutomaticDecompression = DecompressionMethods.None;
-            using (var resp = (HttpWebResponse)req.GetResponse())
-            using (var src = resp.GetResponseStream())
-            using (var dst = new FileStream(destPath, FileMode.Create, FileAccess.Write))
+            Exception last = null;
+            for (int attempt = 1; attempt <= 3; attempt++)
             {
-                src.CopyTo(dst);
+                cancel.ThrowIfCancellationRequested();
+                try
+                {
+                    var req = (HttpWebRequest)WebRequest.Create(url);
+                    req.Timeout = 20000;
+                    req.ReadWriteTimeout = 20000;
+                    req.UserAgent = "GreenChrome/0.1";
+                    req.AutomaticDecompression = DecompressionMethods.None;  // 二进制不能被解压
+                    req.AllowAutoRedirect = true;                            // 跟随 302
+
+                    using (var resp = (HttpWebResponse)req.GetResponse())
+                    using (var src = resp.GetResponseStream())
+                    using (var dst = new FileStream(destPath, FileMode.Create, FileAccess.Write))
+                    {
+                        var buf = new byte[81920];
+                        long got = 0;
+                        var total = resp.ContentLength;
+                        while (true)
+                        {
+                            cancel.ThrowIfCancellationRequested();
+                            int n = src.Read(buf, 0, buf.Length);
+                            if (n <= 0) break;
+                            dst.Write(buf, 0, n);
+                            got += n;
+                            if (onProgress != null) onProgress(got, total);
+                        }
+                    }
+                    return;
+                }
+                catch (OperationCanceledException)
+                {
+                    throw;
+                }
+                catch (Exception ex)
+                {
+                    last = ex;
+                    if (attempt >= 3) break;
+                    if (log != null)
+                        log("下载失败（第 " + attempt + "/3 次）：" + ex.Message + "，重试…");
+                    Thread.Sleep(800 * attempt);
+                }
             }
+            throw new IOException("Chrome++ 包下载失败（已重试 3 次）：" +
+                (last == null ? "未知错误" : last.Message), last);
         }
 
         private static string DownloadText(string url, int timeoutMs)

@@ -519,7 +519,7 @@ namespace GreenChrome
             try
             {
                 // Chrome 与 Chrome++ 并行检查；Chrome++ 失败不影响主流程
-                var cppTask = Task.Run(() => ChromePlusClient.FetchLatest());
+                var cppTask = Task.Run(() => ChromePlusClient.FetchLatest(m => AddLog(m)));
                 var data = await Task.Run(() => CoiClient.Fetch(_cfg.Api));
                 _cppRelease = await cppTask;         // 失败时为 null，静默降级
                 if (_cppRelease != null)
@@ -706,7 +706,9 @@ namespace GreenChrome
                 {
                     log.Add(m);
                     AddLog(m);
-                }));
+                },
+                (got, total) => SetProgress(got, total),
+                _cancel != null ? _cancel.Token : CancellationToken.None));
 
                 AddLog("Chrome++ 已更新到 " + _cppRelease.Version);
                 RefreshLocalInfo();
@@ -721,6 +723,7 @@ namespace GreenChrome
             }
             finally
             {
+                HideProgress();
                 SetBusy(false);
             }
         }
