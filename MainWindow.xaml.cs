@@ -240,7 +240,8 @@ namespace GreenChrome
             BtnPickExisting.IsEnabled = false;
             BtnMakeFresh.IsEnabled = false;
             FreshProgress.Visibility = Visibility.Visible;
-            FreshFill.Width = 0;
+            ColFreshDone.Width = new GridLength(0);
+            ColFreshRest.Width = new GridLength(1, GridUnitType.Star);
             FreshStatus.Text = "正在获取线上版本…";
             AddLog("开始从零制作：" + path + "（通道 " + channel + "）");
 
@@ -311,10 +312,14 @@ namespace GreenChrome
             {
                 _w.Ui(() =>
                 {
-                    var w = _w.FreshFill.Parent as System.Windows.FrameworkElement;
-                    double full = w != null ? w.ActualWidth : 0;
                     double pct = total > 0 ? (double)received / total : 0;
-                    _w.FreshFill.Width = Math.Max(0, full * pct);
+                    if (pct < 0) pct = 0;
+                    if (pct > 1) pct = 1;
+
+                    // 用列宽比例控制进度，不能靠 Border.Width（那样 ActualWidth 永远是 0）
+                    _w.ColFreshDone.Width = new GridLength(pct, GridUnitType.Star);
+                    _w.ColFreshRest.Width = new GridLength(1 - pct, GridUnitType.Star);
+
                     _w.FreshStatus.Text = total > 0
                         ? string.Format("正在下载  {0:F0}%   {1:F0} / {2:F0} MB", pct * 100,
                             received / 1048576.0, total / 1048576.0)
@@ -380,7 +385,7 @@ namespace GreenChrome
             _isChecking = true;
 
             BtnCheck.IsEnabled = false;
-            ProgressWrap.Visibility = Visibility.Visible;
+            ShowIndeterminateProgress();
             SetStatus("状态：正在检查更新…", "ColAccent");
             AddLog("正在读取线上版本信息…");
 
@@ -427,7 +432,7 @@ namespace GreenChrome
             {
                 _isChecking = false;
                 BtnCheck.IsEnabled = true;
-                ProgressWrap.Visibility = Visibility.Collapsed;
+                HideProgress();
             }
         }
 
@@ -674,6 +679,7 @@ namespace GreenChrome
             }
             finally
             {
+                HideProgress();
                 SetBusy(false);
                 _cancel = null;
             }
@@ -705,12 +711,45 @@ namespace GreenChrome
         {
             Ui(() =>
             {
-                ProgressWrap.Visibility = Visibility.Visible;
+                ProgressRow.Visibility = Visibility.Visible;
                 double pct = total > 0 ? (double)received / total : 0;
-                ProgressFill.Width = Math.Max(0, ProgressFill.ActualWidth * pct);
+                if (pct < 0) pct = 0;
+                if (pct > 1) pct = 1;
+
+                // 用列宽比例控制进度，不能靠 Border.Width（那样 ActualWidth 永远是 0）
+                ColProgressDone.Width = new GridLength(pct, GridUnitType.Star);
+                ColProgressRest.Width = new GridLength(1 - pct, GridUnitType.Star);
+
                 ProgressText.Text = total > 0
-                    ? string.Format("{0:F0}%  {1:F0}/{2:F0} MB", pct * 100, received / 1048576.0, total / 1048576.0)
+                    ? string.Format("{0:F0}%   {1:F0} / {2:F0} MB",
+                        pct * 100, received / 1048576.0, total / 1048576.0)
                     : string.Format("{0:F0} MB", received / 1048576.0);
+            });
+        }
+
+        /// <summary>
+        /// 显示进度行但不知道进度（检查更新时用）：进度条走满格 + 文字说明。
+        /// </summary>
+        private void ShowIndeterminateProgress()
+        {
+            Ui(() =>
+            {
+                ProgressRow.Visibility = Visibility.Visible;
+                ColProgressDone.Width = new GridLength(1, GridUnitType.Star);
+                ColProgressRest.Width = new GridLength(0);
+                ProgressText.Text = "正在获取线上版本信息…";
+            });
+        }
+
+        /// <summary>隐藏下载进度行（下载结束后调用）。</summary>
+        private void HideProgress()
+        {
+            Ui(() =>
+            {
+                ProgressRow.Visibility = Visibility.Collapsed;
+                ProgressText.Text = "";
+                ColProgressDone.Width = new GridLength(0);
+                ColProgressRest.Width = new GridLength(1, GridUnitType.Star);
             });
         }
 

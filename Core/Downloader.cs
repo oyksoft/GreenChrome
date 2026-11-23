@@ -81,6 +81,7 @@ namespace GreenChrome.Core
                 using (var dst = new FileStream(destPath, FileMode.Create, FileAccess.Write, FileShare.None))
                 {
                     var buf = new byte[81920];
+                    long lastReported = -1;
                     while (true)
                     {
                         cancel.ThrowIfCancellationRequested();
@@ -88,16 +89,40 @@ namespace GreenChrome.Core
                         if (n <= 0) break;
                         dst.Write(buf, 0, n);
                         progress.Received += n;
+
+                        // 节流：进度变化超过 0.2% 或超过 512 KB 才回调一次，
+                        // 否则 500 MB 的包会触发上万次跨线程回调，把界面拖垮
                         if (onProgress != null)
                         {
-                            var snapshot = new Progress
+                            bool changed;
+                            if (total > 0)
                             {
-                                Url = progress.Url,
-                                Total = progress.Total,
-                                Received = progress.Received
-                            };
-                            onProgress(snapshot);
+                                long permille = progress.Received * 1000 / total;
+                                changed = permille != lastReported;
+                                lastReported = permille;
+                            }
+                            else
+                            {
+                                changed = progress.Received - lastReported >= 512 * 1024;
+                                if (changed) lastReported = progress.Received;
+                            }
+
+                            if (changed)
+                            {
+                                var snapshot = new Progress
+                                {
+                                    Url = progress.Url,
+                                    Total = progress.Total,
+                                    Received = progress.Received
+                                };
+                                onProgress(snapshot);
+                            }
                         }
+                    }
+                    // 收尾再报一次，确保 100% 显示出来
+                    if (onProgress != null)
+                    {
+                        onProgress(new Progress { Url = progress.Url, Total = total, Received = progress.Received });
                     }
                 }
             }
