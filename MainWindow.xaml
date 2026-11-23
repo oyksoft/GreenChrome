@@ -440,7 +440,8 @@
                                      VerticalAlignment="Top" Margin="1,8,0,0" Fill="{StaticResource ColAccent}"/>
                             <TextBlock Grid.Row="4" Grid.Column="1" Text="ghMirrors" Style="{StaticResource ConfKey}"/>
                             <TextBlock Grid.Row="4" Grid.Column="2" Style="{StaticResource ConfDesc}"
-                                       Text="GitHub 国内镜像前缀列表，Chrome++ 下载时先试镜像再试官方。写 [] 则只走官方。"/>
+                                       Text="GitHub 国内镜像前缀列表，Chrome++ 下载时先试镜像再试官方。写 [] 则只走官方。"
+                                       x:Name="GhMirrorsDesc"/>
                             <Ellipse Grid.Row="5" Grid.Column="0" Width="6" Height="6"
                                      VerticalAlignment="Top" Margin="1,8,0,0" Fill="{StaticResource ColTextMuted}"/>
                             <TextBlock Grid.Row="5" Grid.Column="1" Text="proxy" Style="{StaticResource ConfKey}" Foreground="{StaticResource ColTextMuted}"/>

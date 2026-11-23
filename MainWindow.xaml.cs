@@ -130,6 +130,19 @@ namespace GreenChrome
 
             UpdateApiLink();
 
+            // 配置文件路径
+            if (ConfPathText != null)
+                ConfPathText.Text = AppConfig.FilePath;
+
+            // 当前实际使用的镜像（含内置默认值）
+            if (GhMirrorsDesc != null)
+            {
+                var mirrors = _cfg.MirrorList;
+                var list = mirrors.Length > 0 ? string.Join("、", mirrors) : "（无）";
+                GhMirrorsDesc.Text = "GitHub 国内镜像前缀列表，Chrome++ 下载时先试镜像再试官方。"
+                    + "当前使用：" + list + "。写 [] 则只走官方。";
+            }
+
             if (bound)
                 RefreshLocalInfo();
         }
