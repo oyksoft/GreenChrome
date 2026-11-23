@@ -729,6 +729,46 @@ namespace GreenChrome
             }
         }
 
+        /// <summary>用记事本打开配置文件。</summary>
+        private void BtnOpenConfig_Click(object sender, RoutedEventArgs e)
+        {
+            var path = AppConfig.FilePath;
+            try
+            {
+                if (!File.Exists(path))
+                {
+                    var c = new AppConfig();
+                    c.Save();
+                }
+            }
+            catch { }
+            try
+            {
+                Process.Start(new ProcessStartInfo("notepad.exe", "\"" + path + "\"") { UseShellExecute = true });
+                AddLog("已用记事本打开配置文件");
+            }
+            catch (Exception ex)
+            {
+                AddLog("打开配置文件失败：" + ex.Message);
+                MessageDialog.Show(this, DialogKind.Error, "打开失败", ex.Message);
+            }
+        }
+
+        /// <summary>打开配置文件所在目录。</summary>
+        private void BtnOpenConfigDir_Click(object sender, RoutedEventArgs e)
+        {
+            var dir = Path.GetDirectoryName(AppConfig.FilePath);
+            try
+            {
+                Process.Start(new ProcessStartInfo(dir) { UseShellExecute = true });
+                AddLog("已打开配置目录 " + dir);
+            }
+            catch (Exception ex)
+            {
+                AddLog("打开配置目录失败：" + ex.Message);
+            }
+        }
+
         /// <summary>把用户所选通道的版本号高亮（其余淡化）。</summary>
         private void HighlightSelectedChannel()
         {

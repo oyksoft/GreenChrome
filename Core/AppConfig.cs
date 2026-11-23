@@ -46,7 +46,7 @@ namespace GreenChrome.Core
         /// GitHub 国内镜像前缀，按顺序优先尝试，最后回退官方地址。
         /// 留空 / 缺省则用 <see cref="DefaultGhMirrors"/>。
         /// </summary>
-        [JsonProperty("ghMirrors")]
+        [JsonProperty("ghMirrors", NullValueHandling = NullValueHandling.Ignore)]
         public string[] GhMirrors { get; set; }
 
         /// <summary>内置的 GitHub 镜像（实测可用）。</summary>

@@ -367,6 +367,67 @@
                             <TextBlock Grid.Row="3" Grid.Column="0" Text="许可" Style="{StaticResource KvKey}"/>
                             <TextBlock Grid.Row="3" Grid.Column="1" Text="MIT" Style="{StaticResource KvVal}"/>
                         </Grid>
+
+                        <!-- 配置文件说明 -->
+                        <Grid Margin="0,20,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="30"/>
+                                <RowDefinition Height="30"/>
+                                <RowDefinition Height="30"/>
+                                <RowDefinition Height="30"/>
+                                <RowDefinition Height="30"/>
+                                <RowDefinition Height="30"/>
+                                <RowDefinition Height="30"/>
+                            </Grid.RowDefinitions>
+
+                            <TextBlock Grid.Row="0" Grid.Column="0" Text="配置文件" Style="{StaticResource KvKey}"/>
+                            <TextBlock Grid.Row="0" Grid.Column="1" x:Name="ConfPathText" Text=""
+                                       Style="{StaticResource KvVal}" TextTrimming="CharacterEllipsis"
+                                       VerticalAlignment="Center"/>
+                            <StackPanel Grid.Row="0" Grid.Column="2" Orientation="Horizontal">
+                                <Button Content="用记事本打开" Height="26" MinWidth="96" Padding="10,0"
+                                        FontSize="11.5" Style="{StaticResource SecondaryButton}"
+                                        Click="BtnOpenConfig_Click"/>
+                                <Button Content="打开所在目录" Height="26" MinWidth="96" Padding="10,0"
+                                        FontSize="11.5" Style="{StaticResource SecondaryButton}"
+                                        Margin="8,0,0,0" Click="BtnOpenConfigDir_Click"/>
+                            </StackPanel>
+
+                            <TextBlock Grid.Row="1" Grid.Column="0" Text="chromeDir" Style="{StaticResource KvKey}"/>
+                            <TextBlock Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2"
+                                       Style="{StaticResource KvVal}" TextWrapping="Wrap" LineHeight="20"
+                                       Text="绑定的绿色版 Chrome 目录（界面上的「更换目录」也会写这里）"/>
+
+                            <TextBlock Grid.Row="2" Grid.Column="0" Text="channel" Style="{StaticResource KvKey}"/>
+                            <TextBlock Grid.Row="2" Grid.Column="1" Grid.ColumnSpan="2"
+                                       Style="{StaticResource KvVal}" TextWrapping="Wrap" LineHeight="20"
+                                       Text="通道：stable / beta / dev / canary（界面切换也会写这里）"/>
+
+                            <TextBlock Grid.Row="3" Grid.Column="0" Text="api" Style="{StaticResource KvKey}"/>
+                            <TextBlock Grid.Row="3" Grid.Column="1" Grid.ColumnSpan="2"
+                                       Style="{StaticResource KvVal}" TextWrapping="Wrap" LineHeight="20"
+                                       Text="版本来源接口，默认 https://coi.oyk.pub/api"/>
+
+                            <TextBlock Grid.Row="4" Grid.Column="0" Text="ghMirrors" Style="{StaticResource KvKey}"/>
+                            <TextBlock Grid.Row="4" Grid.Column="1" Grid.ColumnSpan="2"
+                                       Style="{StaticResource KvVal}" TextWrapping="Wrap" LineHeight="20"
+                                       Text="GitHub 国内镜像前缀列表（Chrome++ 下载用），先镜像后官方；写 [] 则只走官方"/>
+
+                            <TextBlock Grid.Row="5" Grid.Column="0" Text="proxy" Style="{StaticResource KvKey}"/>
+                            <TextBlock Grid.Row="5" Grid.Column="1" Grid.ColumnSpan="2"
+                                       Style="{StaticResource KvVal}" TextWrapping="Wrap" LineHeight="20"
+                                       Text="预留，当前版本未使用（下载走镜像与直连）"/>
+
+                            <TextBlock Grid.Row="6" Grid.Column="0" Text="autoCheck" Style="{StaticResource KvKey}"/>
+                            <TextBlock Grid.Row="6" Grid.Column="1" Grid.ColumnSpan="2"
+                                       Style="{StaticResource KvVal}" TextWrapping="Wrap" LineHeight="20"
+                                       Text="预留，当前版本未使用（启动不自动联网，只有点「检查更新」才请求）"/>
+                        </Grid>
                     </StackPanel>
                 </Border>
             </Grid>
