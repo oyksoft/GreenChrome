@@ -594,6 +594,7 @@ namespace GreenChrome
             if (string.IsNullOrEmpty(local))
             {
                 LocalChromePlus.Text = "未检测";
+                ChromePlusHint.Visibility = Visibility.Collapsed;
                 BtnCppUpdate.Visibility = Visibility.Collapsed;
                 return;
             }
@@ -602,16 +603,18 @@ namespace GreenChrome
             var localText = string.IsNullOrEmpty(name) ? local : name + " " + local;
             LocalChromePlus.Text = localText;
 
-            // 线上有新版才显示更新按钮
+            // 线上有新版才显示更新按钮；有新版的目标版本单独放一行，不挤在同一行
             if (!string.IsNullOrEmpty(_cppLatestVersion) && !SameVersion(local, _cppLatestVersion))
             {
-                LocalChromePlus.Text = localText + "  →  " + _cppLatestVersion;
+                ChromePlusHint.Text = "可更新到 " + _cppLatestVersion;
+                ChromePlusHint.Visibility = Visibility.Visible;
                 BtnCppUpdate.Visibility = Visibility.Visible;
-                BtnCppUpdate.Content = "更新 Chrome++";
+                BtnCppUpdate.Content = "更新";
                 BtnCppUpdate.IsEnabled = true;
             }
             else
             {
+                ChromePlusHint.Visibility = Visibility.Collapsed;
                 BtnCppUpdate.Visibility = Visibility.Collapsed;
             }
         }
