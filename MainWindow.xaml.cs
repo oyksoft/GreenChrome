@@ -65,6 +65,16 @@ namespace GreenChrome
             {
                 AddLog("配置保存失败：" + ex.Message);
             }
+
+            // 同步界面：对比行、右侧高亮、按钮可用性与文案
+            CompareChannel.Text = ch.ToUpperInvariant();
+            if (_lastData != null)
+            {
+                var picked = CoiClient.Find(_lastData, ch, "x64");
+                CompareOnline.Text = (picked != null && picked.IsUsable) ? picked.version : "无数据";
+            }
+            HighlightSelectedChannel();
+            UpdateUpgradeButton();
         }
 
         // ================= 启动 =================

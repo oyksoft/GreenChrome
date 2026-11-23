@@ -179,11 +179,11 @@
         <!-- 通道分段控件（segmented control）的单个分段 -->
         <Style x:Key="ChannelChip" TargetType="RadioButton">
             <Setter Property="FontFamily" Value="{StaticResource UiFont}"/>
-            <Setter Property="FontSize" Value="12.5"/>
+            <Setter Property="FontSize" Value="12"/>
             <Setter Property="Foreground" Value="{StaticResource ColTextMuted}"/>
-            <Setter Property="Height" Value="30"/>
-            <Setter Property="MinWidth" Value="66"/>
-            <Setter Property="Padding" Value="12,0"/>
+            <Setter Property="Height" Value="28"/>
+            <Setter Property="MinWidth" Value="56"/>
+            <Setter Property="Padding" Value="8,0"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="Template">
                 <Setter.Value>
