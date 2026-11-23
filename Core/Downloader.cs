@@ -40,6 +40,8 @@ namespace GreenChrome.Core
                 throw new ArgumentException("没有可用的下载地址");
 
             Exception lastError = null;
+
+            // 第一轮：带代理
             foreach (var url in urls)
             {
                 cancel.ThrowIfCancellationRequested();
@@ -58,6 +60,7 @@ namespace GreenChrome.Core
                     SafeDelete(destPath);
                 }
             }
+
             throw new Exception("所有下载地址均失败", lastError);
         }
 
@@ -70,6 +73,7 @@ namespace GreenChrome.Core
             req.ReadWriteTimeout = 30000;
             req.UserAgent = "GreenChrome/0.1";
             req.AutomaticDecompression = DecompressionMethods.None; // 二进制不能被解压
+            Http.ApplyHeaders(req);
 
             using (var resp = (HttpWebResponse)req.GetResponse())
             {

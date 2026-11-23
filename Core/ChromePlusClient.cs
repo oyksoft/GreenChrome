@@ -16,6 +16,7 @@ namespace GreenChrome.Core
         public long Size;
         public string PackageUrl;   // 7z 包下载地址
         public string UpdateJsonUrl;
+        public bool Sha256FromMirror;   // SHA256 是否来自镜像（而非官方）
     }
 
     /// <summary>
@@ -35,89 +36,135 @@ namespace GreenChrome.Core
         /// <summary>
         /// 查询最新 Chrome++ 版本。失败返回 null（不抛异常）。
         /// </summary>
-        public static ChromePlusRelease FetchLatest(Action<string> log = null)
+        /// <param name="mirrors">GitHub 镜像前缀，优先尝试；官方地址自动排在最后兜底。</param>
+        /// <param name="log">日志回调。</param>
+        public static ChromePlusRelease FetchLatest(string[] mirrors = null, Action<string> log = null)
         {
+            var apiCandidates = CandidateUrls(RepoApi, mirrors);
+
             for (int attempt = 0; attempt < 2; attempt++)
             {
-                try
+                foreach (var api in apiCandidates)
                 {
-                    var req = (HttpWebRequest)WebRequest.Create(RepoApi);
-                    req.Timeout = 8000;
-                    req.ReadWriteTimeout = 8000;
-                    req.UserAgent = "GreenChrome/0.1";
-                    req.Accept = "application/vnd.github+json";
-
-                    using (var resp = (HttpWebResponse)req.GetResponse())
-                    using (var sr = new StreamReader(resp.GetResponseStream()))
+                    try
                     {
-                        var json = sr.ReadToEnd();
-                        var obj = JObject.Parse(json);
+                        var req = (HttpWebRequest)WebRequest.Create(api);
+                        req.Timeout = 8000;
+                        req.ReadWriteTimeout = 8000;
+                        req.UserAgent = "GreenChrome/0.1";
+                        req.Accept = "application/vnd.github+json";
+                        Http.ApplyHeaders(req);
 
-                        var rel = new ChromePlusRelease
+                        using (var resp = (HttpWebResponse)req.GetResponse())
+                        using (var sr = new StreamReader(resp.GetResponseStream()))
                         {
-                            Version = (string)obj["tag_name"],
-                            UpdateJsonUrl = UpdateJsonBase + obj["tag_name"] + "/update.json"
-                        };
-                        if (string.IsNullOrEmpty(rel.Version)) return null;
+                            var json = sr.ReadToEnd();
+                            var obj = JObject.Parse(json);
 
-                        // 找 7z 资源包
-                        var assets = obj["assets"] as JArray;
-                        if (assets != null)
-                        {
-                            foreach (var a in assets)
+                            var rel = new ChromePlusRelease
                             {
-                                var name = (string)a["name"];
-                                if (name != null && name.EndsWith(".7z", StringComparison.OrdinalIgnoreCase)
-                                    && name.IndexOf("setdll", StringComparison.OrdinalIgnoreCase) < 0)
+                                Version = (string)obj["tag_name"],
+                                UpdateJsonUrl = UpdateJsonBase + obj["tag_name"] + "/update.json"
+                            };
+                            if (string.IsNullOrEmpty(rel.Version)) return null;
+
+                            // 找 7z 资源包
+                            var assets = obj["assets"] as JArray;
+                            if (assets != null)
+                            {
+                                foreach (var a in assets)
                                 {
-                                    rel.PackageUrl = (string)a["browser_download_url"];
-                                    rel.Size = (long?)a["size"] ?? 0;
-                                    break;
+                                    var name = (string)a["name"];
+                                    if (name != null && name.EndsWith(".7z", StringComparison.OrdinalIgnoreCase)
+                                        && name.IndexOf("setdll", StringComparison.OrdinalIgnoreCase) < 0)
+                                    {
+                                        rel.PackageUrl = (string)a["browser_download_url"];
+                                        rel.Size = (long?)a["size"] ?? 0;
+                                        break;
+                                    }
                                 }
                             }
-                        }
+                            if (string.IsNullOrEmpty(rel.PackageUrl)) return null;
 
-                        // 从官方 update.json 取 sha256（若可访问）
-                        try
-                        {
-                            var uJson = DownloadText(rel.UpdateJsonUrl, 4000);
-                            var uo = JObject.Parse(uJson);
-                            rel.Sha256 = (string)uo["sha256"];
-                            if (rel.Size <= 0) rel.Size = (long?)uo["size"] ?? 0;
-                        }
-                        catch
-                        {
-                            // 拿不到 sha256 也允许继续（下载后只校验大小）
-                        }
+                            // SHA256 优先从官方 update.json 取；官方取不到再走镜像
+                            var uCandidates = CandidateUrls(rel.UpdateJsonUrl, mirrors);
+                            foreach (var u in uCandidates)
+                            {
+                                try
+                                {
+                                    var uJson = DownloadText(u, 5000);
+                                    var uo = JObject.Parse(uJson);
+                                    rel.Sha256 = (string)uo["sha256"];
+                                    if (rel.Size <= 0) rel.Size = (long?)uo["size"] ?? 0;
+                                    rel.Sha256FromMirror = !IsOfficial(u, mirrors);
+                                    break;
+                                }
+                                catch
+                                {
+                                    // 换下一个地址
+                                }
+                            }
+                            if (string.IsNullOrEmpty(rel.Sha256) && log != null)
+                                log("未取到官方 SHA256，仅校验文件大小");
 
-                        return rel;
+                            return rel;
+                        }
                     }
-                }
-                catch (WebException wex)
-                {
-                    // GitHub 未认证时限流：未认证 60 次/小时/IP，国内共享出口 IP 很容易触发
-                    var resp = wex.Response as HttpWebResponse;
-                    if (resp != null && resp.StatusCode == HttpStatusCode.Forbidden)
+                    catch (WebException wex)
                     {
-                        var remain = resp.Headers["X-RateLimit-Remaining"];
-                        if (log != null)
-                            log("GitHub 接口被限流（剩余配额 " + remain + "），稍后再试");
+                        // GitHub 未认证时限流：未认证 60 次/小时/IP，国内共享出口 IP 很容易触发
+                        var resp = wex.Response as HttpWebResponse;
+                        if (resp != null && resp.StatusCode == HttpStatusCode.Forbidden)
+                        {
+                            var remain = resp.Headers["X-RateLimit-Remaining"];
+                            if (log != null)
+                                log("GitHub 接口被限流（剩余配额 " + remain + "），稍后再试");
+                        }
+                        else if (log != null)
+                        {
+                            log("获取 Chrome++ 版本失败（" + api + "）：" + wex.Message);
+                        }
                     }
-                    else if (log != null)
+                    catch (Exception ex)
                     {
-                        log("GitHub 接口请求失败：" + wex.Message);
+                        if (log != null) log("获取 Chrome++ 版本异常：" + ex.Message);
                     }
-                    if (attempt == 1) return null;   // 重试一次仍失败 → 静默降级
-                    Thread.Sleep(600);
                 }
-                catch (Exception ex)
-                {
-                    if (log != null) log("GitHub 接口异常：" + ex.Message);
-                    if (attempt == 1) return null;
-                    Thread.Sleep(500);
-                }
+
+                if (attempt == 0) Thread.Sleep(600);   // 整轮都失败才重试一轮
             }
             return null;
+        }
+
+        /// <summary>
+        /// 生成候选地址：镜像优先，官方地址排最后兜底。
+        /// </summary>
+        private static List<string> CandidateUrls(string realUrl, string[] mirrors)
+        {
+            var list = new List<string>();
+            if (mirrors != null)
+            {
+                foreach (var m in mirrors)
+                {
+                    if (string.IsNullOrWhiteSpace(m)) continue;
+                    list.Add(m.TrimEnd('/') + "/" + realUrl);
+                }
+            }
+            list.Add(realUrl);
+            return list;
+        }
+
+        /// <summary>判断某个地址是否来自镜像（而非官方）。</summary>
+        private static bool IsOfficial(string url, string[] mirrors)
+        {
+            if (mirrors == null) return true;
+            foreach (var m in mirrors)
+            {
+                if (string.IsNullOrWhiteSpace(m)) continue;
+                if (url.StartsWith(m.TrimEnd('/'), StringComparison.OrdinalIgnoreCase))
+                    return false;
+            }
+            return true;
         }
 
         /// <summary>
@@ -126,7 +173,8 @@ namespace GreenChrome.Core
         /// </summary>
         public static string Update(string greenChromeDir, string arch, ChromePlusRelease rel,
                                     Action<string> log, Action<long, long> onProgress = null,
-                                    CancellationToken cancel = default(CancellationToken))
+                                    CancellationToken cancel = default(CancellationToken),
+                                    string[] mirrors = null)
         {
             if (rel == null || string.IsNullOrEmpty(rel.PackageUrl))
                 throw new InvalidOperationException("没有可用的 Chrome++ 下载地址");
@@ -139,7 +187,31 @@ namespace GreenChrome.Core
                 var pkgPath = Path.Combine(tempDir, "chrome_plus.7z");
                 log("正在下载 Chrome++ " + rel.Version + "（" + (rel.Size / 1024) + " KB）");
 
-                DownloadFile(rel.PackageUrl, pkgPath, log, onProgress, cancel);
+                // 镜像优先，官方兼底
+                var candidates = CandidateUrls(rel.PackageUrl, mirrors);
+                Exception last = null;
+
+                foreach (var url in candidates)
+                {
+                    cancel.ThrowIfCancellationRequested();
+                    try
+                    {
+                        DownloadFile(url, pkgPath, log, onProgress, cancel);
+                        last = null;
+                        if (!IsOfficial(url, mirrors))
+                            log("已从镜像下载：" + HostOf(url));
+                        break;
+                    }
+                    catch (OperationCanceledException) { throw; }
+                    catch (Exception ex)
+                    {
+                        last = ex;
+                        if (log != null)
+                            log("下载失败（" + HostOf(url) + "）：" + ex.Message + "，换下一个");
+                    }
+                }
+                if (last != null)
+                    throw new IOException("Chrome++ 包下载失败（镜像和官方地址都试过了）：" + last.Message, last);
 
                 if (!string.IsNullOrEmpty(rel.Sha256))
                 {
@@ -194,6 +266,12 @@ namespace GreenChrome.Core
             }
         }
 
+        /// <summary>取地址的主机名，用于日志里简短显示。</summary>
+        private static string HostOf(string url)
+        {
+            try { return new Uri(url).Host; } catch { return url; }
+        }
+
         /// <summary>
         /// 下载文件。GitHub 的 release 下载会 302 跳到 release-assets.githubusercontent.com，
         /// 国内网络下这个跳转容易超时，所以加重试。
@@ -213,6 +291,7 @@ namespace GreenChrome.Core
                     req.UserAgent = "GreenChrome/0.1";
                     req.AutomaticDecompression = DecompressionMethods.None;  // 二进制不能被解压
                     req.AllowAutoRedirect = true;                            // 跟随 302
+                    Http.ApplyHeaders(req);
 
                     using (var resp = (HttpWebResponse)req.GetResponse())
                     using (var src = resp.GetResponseStream())
@@ -255,6 +334,7 @@ namespace GreenChrome.Core
             var req = (HttpWebRequest)WebRequest.Create(url);
             req.Timeout = timeoutMs;
             req.UserAgent = "GreenChrome/0.1";
+            Http.ApplyHeaders(req);
             using (var resp = (HttpWebResponse)req.GetResponse())
             using (var sr = new StreamReader(resp.GetResponseStream()))
             {

@@ -232,7 +232,7 @@ namespace GreenChrome.Core
         /// 返回实际版本号。调用前应先过 ValidateFreshTarget。
         /// </summary>
         public static string CreateFresh(string targetDir, ReleaseInfo rel, string arch,
-            IProgress p, CancellationToken cancel)
+            IProgress p, CancellationToken cancel, string[] mirrors = null)
         {
             var version = Apply(targetDir, rel, p, cancel);
 
@@ -248,14 +248,14 @@ namespace GreenChrome.Core
             p.Status("正在安装 Chrome++");
             try
             {
-                var cpp = ChromePlusClient.FetchLatest();
+                var cpp = ChromePlusClient.FetchLatest(mirrors, p.Log);
                 if (cpp == null)
                 {
                     p.Log("Chrome++ 获取失败，先跳过（Chrome 已可用，稍后可单独更新）");
                 }
                 else
                 {
-                    ChromePlusClient.Update(targetDir, arch ?? "x64", cpp, p.Log);
+                    ChromePlusClient.Update(targetDir, arch ?? "x64", cpp, p.Log, null, cancel, mirrors);
                     p.Log("已安装 Chrome++ " + cpp.Version);
                 }
             }

@@ -1,85 +1,64 @@
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Threading;
+using GreenChrome.Core;
 
-namespace GreenChrome.Tools
+class Program
 {
-    /// <summary>
-    /// 诊断工具：列出正在运行的、属于指定绿色版目录的 Chrome 进程。
-    /// 用来排查「更新时提示 Chrome 正在运行」的问题。
-    ///
-    /// 用法：probe.exe &lt;绿色版目录&gt;
-    /// </summary>
-    class Program
+    static void Main()
     {
-        static int Main(string[] args)
+        Console.OutputEncoding = System.Text.Encoding.UTF8;
+
+        Console.WriteLine("=== 1. 版本接口：直连 coi.oyk.pub ===");
+        var sw = Stopwatch.StartNew();
+        var data = CoiClient.Fetch("https://coi.oyk.pub/api");
+        sw.Stop();
+        Console.WriteLine("  OK  " + data.Count + " 条，用时 " + sw.Elapsed.TotalSeconds.ToString("F1") + "s");
+
+        Console.WriteLine();
+        Console.WriteLine("=== 2. Chrome++ 版本查询：镜像优先 ===");
+        sw.Restart();
+        var cpp = ChromePlusClient.FetchLatest(AppConfig.DefaultGhMirrors, m => Console.WriteLine("    LOG " + m));
+        sw.Stop();
+        if (cpp == null) { Console.WriteLine("  FAIL 返回 null"); return; }
+        Console.WriteLine("  OK  版本 " + cpp.Version + "  用时 " + sw.Elapsed.TotalSeconds.ToString("F1") + "s");
+        Console.WriteLine("  SHA256 = " + (cpp.Sha256 ?? "(无)"));
+        Console.WriteLine("  来自镜像? " + cpp.Sha256FromMirror);
+
+        Console.WriteLine();
+        Console.WriteLine("=== 3. 镜像全部失效时，应回退官方 ===");
+        var deadMirrors = new[] { "https://not-exist-mirror-xxx.invalid" };
+        sw.Restart();
+        var cpp2 = ChromePlusClient.FetchLatest(deadMirrors, m => Console.WriteLine("    LOG " + m));
+        sw.Stop();
+        Console.WriteLine("  " + (cpp2 != null ? "OK  回退成功，版本 " + cpp2.Version : "FAIL 返回 null")
+            + "，用时 " + sw.Elapsed.TotalSeconds.ToString("F1") + "s");
+
+        Console.WriteLine();
+        Console.WriteLine("=== 4. 下载 + 解包 + 装 version.dll（走镜像）===");
+        sw.Restart();
+        var dir = Path.Combine(Path.GetTempPath(), "gc_cpp_t" + DateTime.Now.ToString("HHmmss"));
+        Directory.CreateDirectory(dir);
+        try
         {
-            Console.OutputEncoding = System.Text.Encoding.UTF8;
-
-            var dir = args.Length > 0 ? args[0] : @"D:\GreenSoft\MyChrome";
-            var groups = RunningChromeIn(dir);
-
-            Console.WriteLine("目录: " + dir);
-            if (groups.Count == 0)
-            {
-                Console.WriteLine("没有正在运行的 Chrome 进程属于该目录。");
-                return 0;
-            }
-
-            foreach (var g in groups)
-                Console.WriteLine(string.Format("  {0}   （{1} 个进程）", g.Path, g.Count));
-
-            Console.WriteLine("合计 " + groups.Sum(g => g.Count) + " 个进程。");
-            return 0;
+            ChromePlusClient.Update(dir, "x64", cpp, m => Console.WriteLine("    LOG " + m),
+                (g, t) => { }, CancellationToken.None, AppConfig.DefaultGhMirrors);
+            sw.Stop();
+            var dll = Path.Combine(dir, "App", "version.dll");
+            var ini = Path.Combine(dir, "App", "chrome++.ini");
+            Console.WriteLine("  OK  version.dll " + new FileInfo(dll).Length + " 字节"
+                + "  chrome++.ini " + (File.Exists(ini) ? new FileInfo(ini).Length + " 字节" : "无")
+                + "  用时 " + sw.Elapsed.TotalSeconds.ToString("F1") + "s");
         }
-
-        private class RunningProc
+        catch (Exception ex)
         {
-            public string Path;
-            public List<int> Pids = new List<int>();
-            public int Count { get { return Pids.Count; } }
+            Console.WriteLine("  FAIL " + ex.Message);
         }
-
-        private static List<RunningProc> RunningChromeIn(string greenDir)
+        finally
         {
-            var found = new List<RunningProc>();
-            if (string.IsNullOrWhiteSpace(greenDir)) return found;
-
-            string root;
-            try { root = Path.GetFullPath(greenDir).TrimEnd('\\', '/'); }
-            catch { return found; }
-
-            foreach (var name in new[] { "chrome", "chrome_proxy" })
-            {
-                Process[] procs;
-                try { procs = Process.GetProcessesByName(name); } catch { continue; }
-
-                foreach (var p in procs)
-                {
-                    using (p)
-                    {
-                        try
-                        {
-                            var file = p.MainModule.FileName;
-                            if (string.IsNullOrEmpty(file)) continue;
-                            var d = Path.GetDirectoryName(file);
-                            if (string.IsNullOrEmpty(d)) continue;
-                            d = Path.GetFullPath(d).TrimEnd('\\', '/');
-                            if (!d.StartsWith(root, StringComparison.OrdinalIgnoreCase)) continue;
-                            if (d.Length > root.Length && root.Length > 0 &&
-                                d[root.Length] != '\\' && d[root.Length] != '/') continue;
-
-                            var g = found.Find(x => string.Equals(x.Path, file, StringComparison.OrdinalIgnoreCase));
-                            if (g == null) { g = new RunningProc { Path = file }; found.Add(g); }
-                            g.Pids.Add(p.Id);
-                        }
-                        catch { /* 无权读取路径的进程跳过 */ }
-                    }
-                }
-            }
-            return found;
+            try { Directory.Delete(dir, true); } catch { }
         }
     }
 }

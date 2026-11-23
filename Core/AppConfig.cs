@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
 using System.Text;
@@ -28,13 +29,46 @@ namespace GreenChrome.Core
         [JsonProperty("api")]
         public string Api { get; set; }
 
-        /// <summary>代理，空字符串 = 不用代理。</summary>
+        /// <summary>
+        /// 代理预留字段（形如 http://127.0.0.1:7890），当前版本不使用。
+        /// 版本接口（coi.oyk.pub）和 Chrome 官方包（dl.google.com）都走直连，
+        /// GitHub（Chrome++）走国内镜像，镜像失败再回退官方地址。
+        /// 保留是为了与 Go 版共用同一份配置文件。
+        /// </summary>
         [JsonProperty("proxy")]
         public string Proxy { get; set; }
 
         /// <summary>启动时是否自动检查更新。</summary>
         [JsonProperty("autoCheck")]
         public bool AutoCheck { get; set; }
+
+        /// <summary>
+        /// GitHub 国内镜像前缀，按顺序优先尝试，最后回退官方地址。
+        /// 留空 / 缺省则用 <see cref="DefaultGhMirrors"/>。
+        /// </summary>
+        [JsonProperty("ghMirrors")]
+        public string[] GhMirrors { get; set; }
+
+        /// <summary>内置的 GitHub 镜像（实测可用）。</summary>
+        public static readonly string[] DefaultGhMirrors =
+        {
+            "https://gh-proxy.com",
+            "https://ghproxy.net"
+        };
+
+        /// <summary>实际使用的镜像列表。</summary>
+        [JsonIgnore]
+        public string[] MirrorList
+        {
+            get
+            {
+                if (GhMirrors == null || GhMirrors.Length == 0) return DefaultGhMirrors;
+                var list = new List<string>();
+                foreach (var m in GhMirrors)
+                    if (!string.IsNullOrWhiteSpace(m)) list.Add(m.Trim());
+                return list.Count > 0 ? list.ToArray() : DefaultGhMirrors;
+            }
+        }
 
         public AppConfig()
         {

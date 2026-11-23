@@ -32,6 +32,7 @@ namespace GreenChrome.Core
     {
         /// <summary>
         /// 拉取全部通道信息。超时 8 秒。返回 key → ReleaseInfo（如 win_dev_x64）。
+        /// 走直连（版本来源是自己的服务器，不需要代理）。
         /// </summary>
         public static Dictionary<string, ReleaseInfo> Fetch(string apiUrl)
         {

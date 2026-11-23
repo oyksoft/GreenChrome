@@ -317,7 +317,7 @@ namespace GreenChrome
 
                 var progress = new FreshProgressReporter(this);
                 var version = await Task.Run(() =>
-                    ChromeUpdater.CreateFresh(path, rel, "x64", progress, _cancel.Token));
+                    ChromeUpdater.CreateFresh(path, rel, "x64", progress, _cancel.Token, _cfg.MirrorList));
 
                 AddLog("制作完成，版本 " + version);
                 FreshStatus.Text = "制作完成：" + version;
@@ -519,7 +519,7 @@ namespace GreenChrome
             try
             {
                 // Chrome 与 Chrome++ 并行检查；Chrome++ 失败不影响主流程
-                var cppTask = Task.Run(() => ChromePlusClient.FetchLatest(m => AddLog(m)));
+                var cppTask = Task.Run(() => ChromePlusClient.FetchLatest(_cfg.MirrorList, m => AddLog(m)));
                 var data = await Task.Run(() => CoiClient.Fetch(_cfg.Api));
                 _cppRelease = await cppTask;         // 失败时为 null，静默降级
                 if (_cppRelease != null)
@@ -708,7 +708,8 @@ namespace GreenChrome
                     AddLog(m);
                 },
                 (got, total) => SetProgress(got, total),
-                _cancel != null ? _cancel.Token : CancellationToken.None));
+                _cancel != null ? _cancel.Token : CancellationToken.None,
+                _cfg.MirrorList));
 
                 AddLog("Chrome++ 已更新到 " + _cppRelease.Version);
                 RefreshLocalInfo();
