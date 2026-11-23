@@ -21,6 +21,8 @@ namespace GreenChrome
         }
 
         private bool _initializing = true;
+        private bool _uiReady = false;     // Loaded 之后才响应导航切换
+        private int _currentPage = 0;      // 0 = 仪表盘，1 = 关于
 
         private void MainWindow_Loaded(object sender, RoutedEventArgs e)
         {
@@ -29,6 +31,7 @@ namespace GreenChrome
             UpdateView();
             UpdateUpgradeButton();   // 未检查前禁用
             _initializing = false;
+            _uiReady = true;
         }
 
         /// <summary>按配置里的 channel 选中对应 chip（初始化阶段不落盘）。</summary>
@@ -93,7 +96,7 @@ namespace GreenChrome
         private void UpdateView()
         {
             bool bound = !string.IsNullOrEmpty(_cfg.ChromeDir);
-            bool showAbout = NavAbout != null && NavAbout.IsChecked == true;
+            bool showAbout = _currentPage == 1;
 
             PageOnboarding.Visibility = (!bound && !showAbout) ? Visibility.Visible : Visibility.Collapsed;
             PageDashboard.Visibility = (bound && !showAbout) ? Visibility.Visible : Visibility.Collapsed;
@@ -109,19 +112,31 @@ namespace GreenChrome
             var arch = Detector.Arch(_cfg.ChromeDir);
             var verText = string.IsNullOrEmpty(ver) ? "未检测" : ver;
             LocalVersion.Text = verText + " · " + arch;
+
+            var cpVer = Detector.ChromePlusVersion(_cfg.ChromeDir);
+            var cpName = Detector.ChromePlusName(_cfg.ChromeDir);
+            if (string.IsNullOrEmpty(cpVer))
+                LocalChromePlus.Text = "未检测";
+            else if (string.IsNullOrEmpty(cpName))
+                LocalChromePlus.Text = cpVer;
+            else
+                LocalChromePlus.Text = cpName + " " + cpVer;
+
             LocalDir.Text = _cfg.ChromeDir;
         }
 
         // ================= 导航 =================
         private void NavDashboard_Checked(object sender, RoutedEventArgs e)
         {
-            if (PageDashboard == null) return;
+            if (!_uiReady) return;   // 初始化期间的事件忽略
+            _currentPage = 0;
             UpdateView();
         }
 
         private void NavAbout_Checked(object sender, RoutedEventArgs e)
         {
-            if (PageAbout == null) return;
+            if (!_uiReady) return;
+            _currentPage = 1;
             UpdateView();
         }
 

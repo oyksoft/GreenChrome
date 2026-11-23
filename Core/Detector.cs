@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using System.IO;
 
 namespace GreenChrome.Core
@@ -103,6 +104,55 @@ namespace GreenChrome.Core
             catch
             {
                 return "未知";
+            }
+        }
+
+        /// <summary>
+        /// 读取 Chrome++（version.dll）的版本号，如 "1.20.1"。
+        /// Chrome++ 用 version.dll 代理，其文件版本信息里有真实版本。
+        /// 读不到返回空字符串。
+        /// </summary>
+        public static string ChromePlusVersion(string dir)
+        {
+            if (string.IsNullOrWhiteSpace(dir))
+                return "";
+            try
+            {
+                var dll = Path.Combine(dir, "App", "version.dll");
+                if (!File.Exists(dll))
+                    return "";
+
+                var info = FileVersionInfo.GetVersionInfo(dll);
+                if (!string.IsNullOrEmpty(info.FileVersion))
+                    return info.FileVersion.Trim();
+                if (!string.IsNullOrEmpty(info.ProductVersion))
+                    return info.ProductVersion.Trim();
+                return "";
+            }
+            catch
+            {
+                return "";
+            }
+        }
+
+        /// <summary>
+        /// 读取 Chrome++ 的产品名（如 "Chrome++ Next"），用于界面显示。
+        /// </summary>
+        public static string ChromePlusName(string dir)
+        {
+            if (string.IsNullOrWhiteSpace(dir))
+                return "";
+            try
+            {
+                var dll = Path.Combine(dir, "App", "version.dll");
+                if (!File.Exists(dll))
+                    return "";
+                var info = FileVersionInfo.GetVersionInfo(dll);
+                return (info.FileDescription ?? "").Trim();
+            }
+            catch
+            {
+                return "";
             }
         }
 

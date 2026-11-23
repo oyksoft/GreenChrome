@@ -140,16 +140,19 @@
                                     <RowDefinition Height="30"/>
                                     <RowDefinition Height="30"/>
                                     <RowDefinition Height="30"/>
+                                    <RowDefinition Height="30"/>
                                     <RowDefinition Height="38"/>
                                 </Grid.RowDefinitions>
                                 <TextBlock Grid.Row="0" Grid.Column="0" Text="名称" Style="{StaticResource KvKey}"/>
                                 <TextBlock Grid.Row="0" Grid.Column="1" Text="MyChrome（绿色版）" Style="{StaticResource KvVal}"/>
                                 <TextBlock Grid.Row="1" Grid.Column="0" Text="版本" Style="{StaticResource KvKey}"/>
                                 <TextBlock Grid.Row="1" Grid.Column="1" x:Name="LocalVersion" Text="160.0.8171.0 · x64" Style="{StaticResource KvVal}"/>
-                                <TextBlock Grid.Row="2" Grid.Column="0" Text="目录" Style="{StaticResource KvKey}"/>
-                                <TextBlock Grid.Row="2" Grid.Column="1" x:Name="LocalDir" Text="D:\GreenSoft\MyChrome" Style="{StaticResource KvVal}" TextTrimming="CharacterEllipsis"/>
-                                <TextBlock Grid.Row="3" Grid.Column="0" Text="通道" Style="{StaticResource KvKey}"/>
-                                <Border Grid.Row="3" Grid.Column="1" Background="#F1F2F4" CornerRadius="8"
+                                <TextBlock Grid.Row="2" Grid.Column="0" Text="Chrome++" Style="{StaticResource KvKey}"/>
+                                <TextBlock Grid.Row="2" Grid.Column="1" x:Name="LocalChromePlus" Text="未检测" Style="{StaticResource KvVal}"/>
+                                <TextBlock Grid.Row="3" Grid.Column="0" Text="目录" Style="{StaticResource KvKey}"/>
+                                <TextBlock Grid.Row="3" Grid.Column="1" x:Name="LocalDir" Text="D:\GreenSoft\MyChrome" Style="{StaticResource KvVal}" TextTrimming="CharacterEllipsis"/>
+                                <TextBlock Grid.Row="4" Grid.Column="0" Text="通道" Style="{StaticResource KvKey}"/>
+                                <Border Grid.Row="4" Grid.Column="1" Background="#F1F2F4" CornerRadius="8"
                                         Padding="3" HorizontalAlignment="Left" VerticalAlignment="Center">
                                     <StackPanel Orientation="Horizontal">
                                         <RadioButton x:Name="ChipStable" Style="{StaticResource ChannelChip}" Content="STABLE"
