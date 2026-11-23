@@ -123,6 +123,8 @@ namespace GreenChrome
                 LocalChromePlus.Text = cpName + " " + cpVer;
 
             LocalDir.Text = _cfg.ChromeDir;
+            CompareLocal.Text = verText;
+            CompareChannel.Text = (_cfg.Channel ?? "stable").ToUpperInvariant();
         }
 
         // ================= 导航 =================
@@ -242,6 +244,9 @@ namespace GreenChrome
                 VerDev.Text = DisplayOf(data, "dev");
                 VerCanary.Text = DisplayOf(data, "canary");
                 _lastData = data;
+                CompareChannel.Text = (_cfg.Channel ?? "stable").ToUpperInvariant();
+                var picked = CoiClient.Find(data, _cfg.Channel, "x64");
+                CompareOnline.Text = (picked != null && picked.IsUsable) ? picked.version : "无数据";
                 HighlightSelectedChannel();
                 SetStatus("状态：已获取线上版本", "ColAccent");
                 // 放在 SetStatus 之后：内部会按版本对比结果覆盖状态提示
@@ -251,6 +256,7 @@ namespace GreenChrome
             catch (Exception ex)
             {
                 VerStable.Text = VerBeta.Text = VerDev.Text = VerCanary.Text = "获取失败";
+                CompareOnline.Text = "获取失败";
                 SetStatus("状态：检查失败", "ColDanger");
                 AddLog("获取失败：" + ex.Message);
                 MessageDialog.Show(this, DialogKind.Error, "获取失败", ex.Message);
